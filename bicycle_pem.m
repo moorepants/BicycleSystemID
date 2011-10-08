@@ -1,8 +1,10 @@
 function [zees, ems] = bicycle_pem(idRun, checkRun)
 
-pathToData = ['..' filesep 'BicycleDataProcessor' filesep 'exports' ...
-    filesep 'mat' filesep];
+% load in the global variables
+globals
+pathToData = PATH_TO_RUN_MAT_DIRECTORY;
 
+% load the two runs
 dataType = {'id', 'check'};
 for i = 1:length(dataType)
     runData.(dataType{i}) = load([pathToData idRun], 'RollRate', 'SteerRate', 'RollAngle', ...
@@ -41,6 +43,9 @@ sampleSize = 1 / 200;
 for ins = fieldnames(inputs)'
     for outs = fieldnames(outputs)'
 
+        combination = [char(ins) '_' char(outs)];
+        display(sprintf('Buildling the iddata for %s.', combination))
+
         % build the input matrix
         inList = inputs.(char(ins));
         u = zeros(idNumSamples, length(inList));
@@ -62,13 +67,13 @@ for ins = fieldnames(inputs)'
         set(ztmp, 'OutputName', outList)
         set(ztmp, 'OutputUnit', get_units(outList, unitMapping))
 
-        zees.([char(ins) '_' char(outs)]) = ztmp;
+        zees.(combination) = ztmp;
     end
 end
 
 for model = fieldnames(zees)'
     z = zees.(char(model));
-    ze = z(1850:17450);
+    ze = z(6800:10800);
     display(sprintf('Finding the model for %s', char(model)))
     ems.(char(model)) = pem(ze);
 end

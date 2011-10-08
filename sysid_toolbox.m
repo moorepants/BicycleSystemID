@@ -1,5 +1,8 @@
-pathToData = ['..' filesep '..' filesep 'BicycleDataProcessor' filesep 'exports' ...
-    filesep 'mat' filesep];
+function expTransFuncs = sysid_toolbox();
+
+globals
+
+pathToData = PATH_TO_RUN_MAT_DIRECTORY;
 
 load([pathToData '00264.mat'], 'RollRate', 'SteerRate', 'RollAngle', ...
     'SteerAngle', 'PullForce', 'SteerTorque', 'YawRate', 'YawAngle', ...
@@ -7,8 +10,6 @@ load([pathToData '00264.mat'], 'RollRate', 'SteerRate', 'RollAngle', ...
 
 % build the iddata structure
 u = PullForce;
-
-%y = [YawAngle, RollAngle, SteerAngle, RollRate];
 
 y = [YawAngle, RollAngle, SteerAngle, YawRate, RollRate, SteerRate, ...
     LateralRearContact, SteerTorque];
@@ -22,6 +23,8 @@ outputNames = {'Yaw Angle', ...
                'Lateral Rear Contact', ...
                'Steer Torque'};
 
+outputVariables = {'Psi', 'Phi', 'Delta', 'PsiDot', 'PhiDot', 'DeltaDot', 'Y', 'Tdelta'};
+
 outputUnits = {'Radian', ...
                'Radian', ...
                'Radian', ...
@@ -29,7 +32,7 @@ outputUnits = {'Radian', ...
                'Radian/Second', ...
                'Radian/Second', ...
                'Meter', ...
-               'Newton-Meter'}
+               'Newton-Meter'};
 
 sampleSize = 1 / 200;
 
@@ -38,51 +41,22 @@ z = iddata(y, u, sampleSize);
 set(z, 'InputName', 'Lateral Force')
 set(z, 'InputUnit', 'Newtons')
 
-%set(z, 'OutputName', {'Yaw Angle', 'Roll Angle', 'Steer Angle', 'Roll Rate'})
-%set(z, 'OutputUnit', {'Radian', 'Radian', 'Radian', 'Radian/Second'})
-
 set(z, 'OutputName', outputNames)
 set(z, 'OutputUnit', outputUnits)
 
+% id on a subset of the run
 ze = z(2000:4000);
 
-% calculate the frequency response
-%gs = spa(ze);
-%
-%bode(gs, 'sd', 3, 'fill')
-
 % find a general model
-m = pem(ze)
+m = pem(ze);
 
-bode(m)
+% get the discrete transfer functions
+withoutNoise = ss(m.A, m.B, m.C, m.D, sampleSize);
+% get the continous tranfer functions of the lateral force
+con = d2c(withoutNoise, 'tustin');
 
-compare(ze, m)
+[b, a] = ss2tf(con.a, con.b, con.c, con.d, 1);
 
-% go through each input/output pair and get the best parameters for an
-% arx model
-%naVals = zeros(size(y, 2), 1);
-%nbVals = zeros(size(y, 2), 1);
-%nkVals = zeros(size(y, 2), 1);
-%
-%for i = 1:size(y, 2);
-    %zs = iddata(y(:, i), u, 1 / 200);
-    %set(zs, 'OutputName', outputNames{i}, 'OutputUnit', outputUnits{i})
-    %set(zs, 'InputName', 'Lateral Force', 'InputUnit', 'Newtons')
-    %naGuess = 6:10;
-    %nbGuess = 6:10;
-    %nkGuess = delayest(zs(2000:4000));
-    %trials = struc(naGuess, nbGuess, nkGuess);
-    %arxPar = selstruc(arxstruc(zs(2000:4000), zs, trials), 0);
-    %arxMod = arx(zs, arxPar);
-    %bode(arxMod)
-    %pause
-    %naVals(i) = arxPar(1);
-    %nbVals(i) = arxPar(2);
-    %nkVals(i) = arxPar(3);
-%end
-
-%naVals = 10 * ones(size(y, 2))
-%nbVals
-%nkVals
-%
-%arxModel = arx(z, 'na', naVals, 'nb', nbVals, 'nk', nbVals)
+for i = 1:length(outputNames)
+    expTransFuncs.(outputVariables{i}) = tf(b(i, :), a);
+end

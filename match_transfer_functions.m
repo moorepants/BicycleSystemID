@@ -1,7 +1,13 @@
 function bestParameters = match_transfer_functions(bicycle, speed)
 
+globals
+addpath(PATH_TO_CONTROL_MODEL)
+
 % get the initial guess for the gains using Ron's technique and the state
 % space model
+
+olddir = cd(PATH_TO_CONTROL_MODEL);
+
 %guess = [39.3, -0.018, 209.895, 0.081, 0.799, 37];
 %data = generate_data(bicycle, speed, ...
                      %'simulate', 0, ...
@@ -11,11 +17,13 @@ function bestParameters = match_transfer_functions(bicycle, speed)
                      %'neuroFreq', guess(6), ...
                      %'forceTransfer', {'Delta', 'PhiDot', 'Tdelta'});
 
+
 data = generate_data(bicycle, speed, ...
                      'simulate', 0, ...
                      'loopTransfer', 0, ...
-                     'handlingQuality', 0, ...
-                     'forceTransfer', {'Delta', 'PhiDot', 'Tdelta'});
+                     'handlingQuality', 0);
+
+cd(olddir);
 
 % the initial guess for gains
 guess = [data.modelPar.kDelta,
@@ -32,26 +40,33 @@ stateSpace = {data.modelPar.A,
               data.modelPar.C,
               data.modelPar.D};
 
-load('00105.mat', 'PullForce', 'SteerTorque', 'SteerAngle', 'RollRate')
+load([PATH_TO_RUN_MAT_DIRECTORY '00265.mat'], 'PullForce', 'SteerTorque', 'SteerAngle', 'RollRate', ...
+    'RollAngle', 'YawAngle', 'YawRate', 'SteerRate', 'LateralRearContact')
 
-outputs.PhiDot = RollRate;
 outputs.Delta = SteerAngle;
+outputs.PhiDot = RollRate;
+outputs.Phi = RollAngle;
+outputs.Psi = YawAngle;
+outputs.Y = LateralRearContact; % this should be the front contact
 outputs.Tdelta = SteerTorque;
 
-regressors.PhiDot = [6, 7, 0];
-regressors.Delta = [7, 6, -1];
-regressors.Tdelta = [6, 2, -3];
+%regressors.PhiDot = [6, 7, 0];
+%regressors.Delta = [7, 6, -1];
+%regressors.Tdelta = [6, 2, -3];
 
 time = linspace(0, (length(PullForce) - 1) / 200, length(PullForce));
 w = logspace(0, 1.3, 200);
 
-tfOutputs = {'Tdelta'};
+tfOutputs = {'PhiDot'};
+
+% load the pem model transfer functions from file
+expTransFuncs = sysid_toolbox();
 
 for i = 1:length(tfOutputs)
     % compute the transfer function from the experimental data
-    [expTransFuncs.(tfOutputs{i}), ~, ~, ~] = ...
-        gettf1(PullForce, outputs.(tfOutputs{i}), ...
-               regressors.(tfOutputs{i}), time, 0);
+    %[expTransFuncs.(tfOutputs{i}), ~, ~, ~] = ...
+        %gettf1(PullForce, outputs.(tfOutputs{i}), ...
+               %regressors.(tfOutputs{i}), time, 0);
 
     % find the parameters that force the model to best fit the experimental data
     bestParameters.(tfOutputs{i}) = match_gains(bicycle, speed, ...
@@ -62,6 +77,7 @@ for i = 1:length(tfOutputs)
     % now find the transfer function with the best guess
     bestPar = bestParameters.(tfOutputs{i})
     % generate the model with the best parameters
+    olddir = cd(PATH_TO_CONTROL_MODEL);
     data = generate_data(bicycle, speed, ...
                          'gains', bestPar(1:5), ...
                          'neuroFreq', bestPar(6), ...
@@ -69,6 +85,7 @@ for i = 1:length(tfOutputs)
                          'loopTransfer', 0, ...
                          'handlingQuality', 0, ...
                          'stateSpace', stateSpace);
+    cd(olddir)
     % plot the fit
     figure(i)
     b1 = bodeplot(expTransFuncs.(tfOutputs{i}), w);

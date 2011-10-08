@@ -9,8 +9,12 @@ function bestPar = match_gains(bicycle, speed, stateSpace, tfOutput, experimentT
 %   The name of the bicycle.
 % speed : double
 %   The speed of the bicycle.
+% stateSpace : cell array
+%   This cell array should contain the state space matrices {A, B, C, D}
+%   for the whipple pull force bicycle model. Be sure that the `bicyle`
+%   and `speed` match this state space model.
 % tfOutput : char
-%   The lateral force transfer function output.
+%   The name of the lateral force transfer function output.
 % experimentTF : transfer function
 %   The transfer function derived from experimental data.
 % guess : matrix, size(1, 6)
@@ -23,14 +27,20 @@ function bestPar = match_gains(bicycle, speed, stateSpace, tfOutput, experimentT
 %   The parameters that give the best fit of the model to the experimental
 %   transfer function.
 
+% loading in the configuration globals and add the control model directory
+% to the path
+globals
+addpath(PATH_TO_CONTROL_MODEL)
+
+olddir = cd(PATH_TO_CONTROL_MODEL);
 % find the set of gains and neuro frequency that best fit the transfer
 % function
-display('hello')
 [bestPar, fval, exitflag, output] = ...
     fminsearch(@(x) ...
-        transfer_function_mismatch(x, bicycle, speed, experimentTF, stateSpace, tfOutput), ...
+        transfer_function_mismatch(x, bicycle, speed, experimentTF, ...
+        stateSpace, tfOutput), ...
         guess, optimset('Display', 'on', 'MaxFunEvals', 20000, 'MaxIter', 10000))
-pause
+cd(olddir);
 
 display(sprintf('Function evaluated %d times with %d iterations.', ...
                 output.funcCount, output.iterations))
@@ -54,7 +64,7 @@ modelTF = tf(data.forceTF.(tfOutput).num, ...
              data.forceTF.(tfOutput).den);
 
 % frequency from 1 to 20 radians per second
-w = logspace(0, 1.3, 200);
+w = logspace(0, 1.15, 200);
 
 % evaluate the transfer functions at the frequencies
 modelResponse = freqresp(modelTF, w);
