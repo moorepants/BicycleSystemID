@@ -1,17 +1,74 @@
-function zees = build_id_data(idRun, checkRun)
+function z = build_id_data(idRun, valRun)
+% Returns a structure with an iddata object for an identification and
+% validation run.
+%
+% Parameters
+% ----------
+% idRun : char
+%   The file name of a run.
+% valRun : char
+%   The file name of a run.
+%
+% Returns
+% -------
+% z : structure
+%   id : iddata
+%       The iddata for the identification run.
+%   val : iddata
+%       The iddata for the validation run.
 
 % load in the configuration variables
 config
 
+run.id = idRun;
+run.val = valRun;
+
 % load the two runs
-dataType = {'id', 'check'};
+dataType = {'id', 'val'};
 for i = 1:length(dataType)
-    runData.(dataType{i}) = load([PATH_TO_RUN_MAT_DIRECTORY idRun], 'RollRate', 'SteerRate', 'RollAngle', ...
-        'SteerAngle', 'PullForce', 'SteerTorque', 'YawRate', 'YawAngle', ...
-        'LateralRearContact', 'LateralRearContactRate');
+    runData.(dataType{i}) = load([PATH_TO_RUN_MAT_DIRECTORY run.(dataType{i})], ...
+    'RollRate', 'SteerRate', 'RollAngle', 'SteerAngle', 'PullForce', ...
+    'SteerTorque', 'YawRate', 'YawAngle', 'LateralRearContact', ...
+    'LateralRearContactRate', 'NISampleRate');
 end
 
-idNumSamples = length(runData.id.RollRate);
+inputs = {'PullForce'};
+
+outputs = {'LateralRearContact', ...
+           'YawAngle', ...
+           'RollAngle', ...
+           'SteerAngle', ...
+           'LateralRearContactRate', ...
+           'YawRate', ...
+           'RollRate', ...
+           'SteerRate', ...
+           'SteerTorque'};
+
+for i = 1:length(dataType)
+    % build the input matrix
+    u = zeros(length(runData.(dataType{i}).PullForce), length(inputs));
+    for j = 1:length(inputs)
+        u(:, j) = runData.(dataType{i}).(inputs{j});
+    end
+
+    % build the output matrix
+    y = zeros(length(runData.(dataType{i}).RollRate), length(outputs));
+    for j = 1:length(outputs)
+        y(:, j) = runData.(dataType{i}).(outputs{j});
+    end
+
+    zTmp = iddata(y, u, 1 / 200);
+
+    set(zTmp, 'InputName', inputs)
+    set(zTmp, 'InputUnit', get_units(inputs))
+    set(zTmp, 'OutputName', outputs)
+    set(zTmp, 'OutputUnit', get_units(outputs))
+
+    z.(dataType{i}) = zTmp;
+end
+
+function units = get_units(signalNames)
+% Returns the units for a given cell array of signal names.
 
 unitMapping = struct('SteerAngle', 'Radian', ...
                      'RollAngle', 'Radian', ...
@@ -23,59 +80,6 @@ unitMapping = struct('SteerAngle', 'Radian', ...
                      'LateralRearContactRate', 'Meter/Second', ...
                      'PullForce', 'Newton', ...
                      'SteerTorque', 'Newton-Meter');
-
-% this the only input when looking at the whole system
-inputs.system = {'PullForce'};
-
-% these are the inputs when looking at only the bicycle
-%inputs.bicycle = {'SteerTorque', 'PullForce'};
-
-%outputs.measuredRates = {'SteerRate', 'RollRate', 'YawRate'};
-%outputs.allRates = {'SteerRate', 'RollRate', 'YawRate', ...
-    %'LateralRearContactRate'};
-outputs.ratesCoords = {'YawAngle', ...
-                       'RollAngle', ...
-                       'SteerAngle', ...
-                       'YawRate', ...
-                       'RollRate', ...
-                       'SteerRate', ...
-                       'LateralRearContact'...
-                       'SteerTorque'};
-
-sampleSize = 1 / 200;
-
-for ins = fieldnames(inputs)'
-    for outs = fieldnames(outputs)'
-
-        combination = [char(ins) '_' char(outs)];
-        display(sprintf('Buildling the iddata for %s.', combination))
-
-        % build the input matrix
-        inList = inputs.(char(ins));
-        u = zeros(idNumSamples, length(inList));
-        for i = 1:length(inList)
-            u(:, i) = runData.id.(inList{i});
-        end
-
-        % build the output matrix
-        outList = outputs.(char(outs));
-        y = zeros(idNumSamples, length(outList));
-        for i = 1:length(outList)
-            y(:, i) = runData.id.(outList{i});
-        end
-
-        ztmp = iddata(y, u, sampleSize);
-
-        set(ztmp, 'InputName', inList)
-        set(ztmp, 'InputUnit', get_units(inList, unitMapping))
-        set(ztmp, 'OutputName', outList)
-        set(ztmp, 'OutputUnit', get_units(outList, unitMapping))
-
-        zees.(combination) = ztmp;
-    end
-end
-
-function units = get_units(signalNames, unitMapping)
 
 units = {};
 for i = 1:length(signalNames)
