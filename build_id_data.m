@@ -1,71 +1,56 @@
-function z = build_id_data(idRun, valRun)
-% Returns a structure with an iddata object for an identification and
-% validation run.
+function z = build_id_data(runid, outputs)
+% Returns a structure with an iddata object for run with PullForce as the
+% input.
 %
 % Parameters
 % ----------
 % idRun : char
-%   The file name of a run.
-% valRun : char
-%   The file name of a run.
+%   The file name of a run. (e.g. '00105.mat')
+% outputs : cell array of chars
+%   The desired list of outputs from the data.
 %
 % Returns
 % -------
-% z : structure
-%   id : iddata
-%       The iddata for the identification run.
-%   val : iddata
-%       The iddata for the validation run.
+% z : iddata
+%   The iddata for the run.
 
 % load in the configuration variables
 config
+addpath(PATH_TO_CONTROL_MODEL)
 
-run.id = idRun;
-run.val = valRun;
+% load all the variables into the runData structure
+runData = load([PATH_TO_RUN_MAT_DIRECTORY runid]);
 
-% load the two runs
-dataType = {'id', 'val'};
-for i = 1:length(dataType)
-    runData.(dataType{i}) = load([PATH_TO_RUN_MAT_DIRECTORY run.(dataType{i})], ...
-    'RollRate', 'SteerRate', 'RollAngle', 'SteerAngle', 'PullForce', ...
-    'SteerTorque', 'YawRate', 'YawAngle', 'LateralRearContact', ...
-    'LateralRearContactRate', 'NISampleRate');
+dataInputs = {'RollTorque', 'PullForce', 'yc'};
+meijaardInputs = {'tPhi', 'fB', 'yc'};
+
+meijaardOutputs = cell(size(outputs));
+dataOutputs = cell(size(outputs));
+for i = 1:length(outputs)
+    dataOutputs{i} = convert_variable(outputs{i}, 'data');
+    meijaardOutputs{i} = convert_variable(outputs{i}, 'meijaard');
 end
 
-inputs = {'PullForce'};
-
-outputs = {'LateralRearContact', ...
-           'YawAngle', ...
-           'RollAngle', ...
-           'SteerAngle', ...
-           'LateralRearContactRate', ...
-           'YawRate', ...
-           'RollRate', ...
-           'SteerRate', ...
-           'SteerTorque'};
-
-for i = 1:length(dataType)
-    % build the input matrix
-    u = zeros(length(runData.(dataType{i}).PullForce), length(inputs));
-    for j = 1:length(inputs)
-        u(:, j) = runData.(dataType{i}).(inputs{j});
-    end
-
-    % build the output matrix
-    y = zeros(length(runData.(dataType{i}).RollRate), length(outputs));
-    for j = 1:length(outputs)
-        y(:, j) = runData.(dataType{i}).(outputs{j});
-    end
-
-    zTmp = iddata(y, u, 1 / 200);
-
-    set(zTmp, 'InputName', inputs)
-    set(zTmp, 'InputUnit', get_units(inputs))
-    set(zTmp, 'OutputName', outputs)
-    set(zTmp, 'OutputUnit', get_units(outputs))
-
-    z.(dataType{i}) = zTmp;
+% build the input matrix
+runData.RollTorque = zeros(size(runData.PullForce));
+runData.yc = zeros(size(runData.PullForce));
+u = zeros(length(runData.PullForce), length(dataInputs));
+for j = 1:length(dataInputs)
+    u(:, j) = runData.(dataInputs{j});
 end
+
+% build the output matrix
+y = zeros(length(runData.RollRate), length(outputs));
+for j = 1:length(outputs)
+    y(:, j) = runData.(dataOutputs{j});
+end
+
+z = iddata(y, u, 1 / 200);
+
+set(z, 'InputName', meijaardInputs)
+set(z, 'InputUnit', get_units(dataInputs))
+set(z, 'OutputName', meijaardOutputs)
+set(z, 'OutputUnit', get_units(dataOutputs))
 
 function units = get_units(signalNames)
 % Returns the units for a given cell array of signal names.
@@ -79,7 +64,9 @@ unitMapping = struct('SteerAngle', 'Radian', ...
                      'YawRate', 'Radian/Second', ...
                      'LateralRearContactRate', 'Meter/Second', ...
                      'PullForce', 'Newton', ...
-                     'SteerTorque', 'Newton-Meter');
+                     'SteerTorque', 'Newton-Meter', ...
+                     'RollTorque', 'Newton-Meter', ...
+                     'yc', 'Meter');
 
 units = {};
 for i = 1:length(signalNames)

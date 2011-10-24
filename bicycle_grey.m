@@ -2,13 +2,11 @@ config
 addpath(PATH_TO_CONTROL_MODEL)
 
 % build the grey box model
-aux.bicycle = 'Rigid';
-aux.speed = 7.0;
 % this is the answer we were getting with the roll rate arx
 %guess = [39.3, -0.018, 209.895, 0.081, 0.799, 37];
 % thes are the gains from Ron's method
 guess = [76.3808, -0.0516, 7.2456, 0.2632, 0.0708, 30];
-data = generate_data(aux.bicycle, aux.speed, ...
+data = generate_data('Rigid', 7.0, ...
                      'simulate', 0, ...
                      'loopTransfer', 0, ...
                      'handlingQuality', 0, ...
@@ -18,13 +16,26 @@ data = generate_data(aux.bicycle, aux.speed, ...
                      'display', 0);
 % get the state space model so we don't have to calculate it during the gain
 % matching algorithm
-aux.stateSpace = {data.modelPar.A,
-                  data.modelPar.B,
-                  data.modelPar.C,
-                  data.modelPar.D};
+aux.bicycle.A = data.modelPar.A;
+aux.bicycle.B = data.modelPar.B;
+aux.bicycle.C = data.modelPar.C;
+aux.bicycle.D = data.modelPar.D;
+aux.bicycle.x = {'xP', 'yP', 'psi', 'phi', 'theta', 'thetaR', 'delta', ...
+             'thetaF', 'phiDot', 'thetaRDot', 'deltaDot'};
+aux.bicycle.y = {'xP', 'yP', 'psi', 'phi', 'theta', 'thetaR', 'delta', ...
+             'thetaF', 'xPDot', 'yPDot', 'psiDot', 'phiDot', ...
+             'thetaDot', 'thetaRDot', 'deltaDot', 'thetaFDot', 'xQ', 'yQ'}
+aux.bicycle.u = {'tPhi', 'tDelta', 'fB'};
+%aux.outputs = {'xP', 'yP', 'psi', 'phi', 'theta', 'thetaR', 'delta', ...
+               %'thetaF', 'xPDot', 'yPDot', 'psiDot', 'phiDot', ...
+               %'thetaDot', 'thetaRDot', 'deltaDot', 'thetaFDot', ...
+               %'xQ', 'yQ', 'tDelta'};
+aux.outputs = {'phiDot', 'delta'};
 
-m = idgrey('linear_parameterization', guess, 'c', aux, ...
-    'DisturbanceModel', 'Estimate');
+m = idgrey('linear_parameterization', guess, 'c', aux);
+m.InputName = {'tPhi', 'fB', 'yc'};
+m.OutputName = aux.outputs;
+m.StateName = [aux.bicycle.x, 'tDelta', 'tDeltaDot'];
 
 % load the data
-z = build_id_data('00264.mat', '00265.mat');
+z = build_id_data('00264.mat', aux.outputs);

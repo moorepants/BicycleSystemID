@@ -2,38 +2,13 @@ function [A, B, C, D, K, x0] = linear_parameterization(parameters, sampleTime, a
 % Returns the continous state space for the bicycle/rider closed loop control
 % model.
 
-data = generate_data(auxiliary.bicycle, auxiliary.speed, ...
-                     'gains', parameters(1:5), ...
-                     'neuroFreq', parameters(6), ...
-                     'stateSpace', auxiliary.stateSpace, ...
-                     'simulate', 0, ... don't simulate
-                     'loopTransfer', 0, ... don't find the loop tfs
-                     'handlingQuality', 0, ... don't find the HQM
-                     'forceTransfer', {}, ... don't find the force tfs
-                     'display', 0);
+sys = system_state_space(auxiliary.bicycle, parameters(1:5), parameters(6), auxiliary.outputs);
 
-% the state space for the continous model
-A = data.system.A;
-B = data.system.B;
-C = data.system.C;
-D = data.system.D;
-outputs = data.system.outputs;
+A = sys.A;
+B = sys.B;
+C = sys.C;
+D = sys.D;
 
-keepers = {'yP', ...
-           'psi', ...
-           'phi', ...
-           'delta', ...
-           'yPDot', ...
-           'psiDot', ...
-           'phiDot', ...
-           'deltaDot', ...
-           'tDelta'}';
-
-% find the outputs that are not in keepers
-[~, I] = setdiff(outputs, keepers);
-% remove the rows in the outputs that aren't in keepers
-C(I, :) = [];
-D(I) = [];
-
-K = zeros(17, 9);
-x0 = zeros(17, 1);
+[numOutputs, numStates] = size(C);
+K = zeros(numStates, numOutputs);
+x0 = zeros(numStates, 1);
