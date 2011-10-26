@@ -1,7 +1,7 @@
 function [zees, ems] = bicycle_pem(idRun, checkRun)
 
 % load in the global variables
-globals
+config
 pathToData = PATH_TO_RUN_MAT_DIRECTORY;
 
 % load the two runs
@@ -78,9 +78,9 @@ for model = fieldnames(zees)'
     ems.(char(model)) = pem(ze);
 end
 
-%bode(m)
-%
-%compare(ze, m)
+bode(m)
+
+compare(ze, m)
 
 function units = get_units(signalNames, unitMapping)
 

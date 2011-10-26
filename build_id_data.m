@@ -21,8 +21,8 @@ addpath(PATH_TO_CONTROL_MODEL)
 % load all the variables into the runData structure
 runData = load([PATH_TO_RUN_MAT_DIRECTORY runid]);
 
-dataInputs = {'RollTorque', 'PullForce', 'yc'};
-meijaardInputs = {'tPhi', 'fB', 'yc'};
+dataInputs = {'PullForce'};
+meijaardInputs = {'fB'};
 
 meijaardOutputs = cell(size(outputs));
 dataOutputs = cell(size(outputs));
@@ -32,8 +32,6 @@ for i = 1:length(outputs)
 end
 
 % build the input matrix
-runData.RollTorque = zeros(size(runData.PullForce));
-runData.yc = zeros(size(runData.PullForce));
 u = zeros(length(runData.PullForce), length(dataInputs));
 for j = 1:length(dataInputs)
     u(:, j) = runData.(dataInputs{j});
@@ -65,8 +63,7 @@ unitMapping = struct('SteerAngle', 'Radian', ...
                      'LateralRearContactRate', 'Meter/Second', ...
                      'PullForce', 'Newton', ...
                      'SteerTorque', 'Newton-Meter', ...
-                     'RollTorque', 'Newton-Meter', ...
-                     'yc', 'Meter');
+                     'RollTorque', 'Newton-Meter');
 
 units = {};
 for i = 1:length(signalNames)

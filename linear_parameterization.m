@@ -2,7 +2,8 @@ function [A, B, C, D, K, x0] = linear_parameterization(parameters, sampleTime, a
 % Returns the continous state space for the bicycle/rider closed loop control
 % model.
 
-sys = system_state_space(auxiliary.bicycle, parameters(1:5), parameters(6), auxiliary.outputs);
+sys = system_state_space(auxiliary.bicycle, parameters(1:5), ...
+    parameters(6), auxiliary.inputs, auxiliary.outputs);
 
 A = sys.A;
 B = sys.B;

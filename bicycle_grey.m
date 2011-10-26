@@ -3,10 +3,10 @@ addpath(PATH_TO_CONTROL_MODEL)
 
 % build the grey box model
 % this is the answer we were getting with the roll rate arx
-%guess = [39.3, -0.018, 209.895, 0.081, 0.799, 37];
+guess = [39.3, -0.018, 209.895, 0.081, 0.799, 37];
 % thes are the gains from Ron's method
-guess = [76.3808, -0.0516, 7.2456, 0.2632, 0.0708, 30];
-data = generate_data('Rigid', 7.0, ...
+%guess = [76.3808, -0.0516, 7.2456, 0.2632, 0.0708, 30];
+data = generate_data('Rigid', 3.0, ...
                      'simulate', 0, ...
                      'loopTransfer', 0, ...
                      'handlingQuality', 0, ...
@@ -31,11 +31,12 @@ aux.bicycle.u = {'tPhi', 'tDelta', 'fB'};
                %'thetaDot', 'thetaRDot', 'deltaDot', 'thetaFDot', ...
                %'xQ', 'yQ', 'tDelta'};
 aux.outputs = {'phiDot', 'delta'};
+aux.inputs = {'fB'};
 
 m = idgrey('linear_parameterization', guess, 'c', aux);
-m.InputName = {'tPhi', 'fB', 'yc'};
+m.InputName = {'fB'};
 m.OutputName = aux.outputs;
 m.StateName = [aux.bicycle.x, 'tDelta', 'tDeltaDot'];
 
 % load the data
-z = build_id_data('00264.mat', aux.outputs);
+z = build_id_data('00105.mat', aux.outputs);
