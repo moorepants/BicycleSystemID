@@ -11,7 +11,7 @@ for i = 1:length(outputs)
     nbGuess = 6:10;
     nkGuess = delayest(z(200 * 8.26:200 * 44.48));
     trials = struc(naGuess, nbGuess, nkGuess);
-    arxPar = selstruc(arxstruc(z(200 * 8.26:200 * 44.48), z(200 * 8.26:200 * 44.48), trials), 0)
+    arxPar = selstruc(arxstruc(z(200 * 8.26:200 * 44.48), z(200 * 8.26:200 * 44.48), trials))
     nanbnk(i, :) = arxPar;
     %arxMod = arx(z, arxPar);
     %bode(arxMod)

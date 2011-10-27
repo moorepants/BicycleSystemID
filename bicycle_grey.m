@@ -30,10 +30,10 @@ aux.bicycle.u = {'tPhi', 'tDelta', 'fB'};
                %'thetaF', 'xPDot', 'yPDot', 'psiDot', 'phiDot', ...
                %'thetaDot', 'thetaRDot', 'deltaDot', 'thetaFDot', ...
                %'xQ', 'yQ', 'tDelta'};
-aux.outputs = {'phiDot', 'delta'};
+aux.outputs = {'phiDot'};
 aux.inputs = {'fB'};
 
-m = idgrey('linear_parameterization', guess, 'c', aux);
+m = idgrey('linear_parameterization', guess, 'c', aux, 'DisturbanceModel', 'Estimate');
 m.InputName = {'fB'};
 m.OutputName = aux.outputs;
 m.StateName = [aux.bicycle.x, 'tDelta', 'tDeltaDot'];
