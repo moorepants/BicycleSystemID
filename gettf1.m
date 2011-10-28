@@ -1,7 +1,7 @@
 function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % Returns a transfer function from an input/output time sequence pair and a
-% regressor.
+% regressor. This is a simple AR implementation with a delay.
 %
 % Parameters
 % ----------
@@ -31,7 +31,7 @@ function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 
 % filters the data
 % The next 7 lines were added by Ron Hess 11/9/01
-ts = tt(6) - tt(5);
+ts = tt(6) - tt(5); % sample time
 [bin,ain] = butter(4, 6 * ts);
 [bout,aout] = butter(4, 6 * ts);
 in = filter(bin, ain, u);
@@ -57,17 +57,25 @@ if flag==1,
                 na = NA;
                 nb = NB;
                 nk = NK;
-                % build a * x = b
+
+                % construc a * x = b, where b is vector of the current
+                % outputs, a are the previous outputs and inputs, and x are
+                % the coefficients in the difference equation
                 j = 0;
-                a = [];
-                b = [];
+                jTot = (length(u) - (na + (nk - 1)) - 10) - (10 + (nk - 1)) + 1;
+                a = zeros(jTot, na + nb);
+                b = zeros(jTot, 1);
+                % for each output
                 for i = (10 + (nk - 1)):(length(u) - (na + (nk - 1)) - 10),
                     j = j + 1;
+                    % previous outputs
                     a(j, 1:na) = y(i:i + na - 1);
+                    % previous inputs
                     a(j, na + 1:na + nb) = u(i + na - nk - nb + 1:i + na - nk);
+                    % current output
                     b(j, 1) = y(i + na);
                 end
-                % solve
+                % solve for the difference equations using coefficients using least squares
                 x = a \ b;
 
                 % from the solution get the coefficients to the numerator
@@ -75,9 +83,9 @@ if flag==1,
                 xy = x(na:-1:1);
                 xu = x(na + nb:-1:na + 1);
                 xy1 = zeros(1, nk-1);
-
                 % calculate the discrete transfer function
                 gdd = tf([xu'], [1 -xy' xy1], ts);
+
                 % convert the discrete transfer function to a continous one
                 % with a Tustin approximation
                 gg = d2c(gdd, 'tustin');
@@ -85,7 +93,7 @@ if flag==1,
                 % continuous transfer function
                 gg = minreal(gg);
 
-                % simulate the system with the input and the computed
+                % simulate the system with the given input and the computed
                 % continous transfer function
                 [yc, t, x] = lsim(gg, u, tt);
 
@@ -105,7 +113,7 @@ if flag==1,
             end
         end
     end
-    % find the minimum of the ems
+    % find the minimum of all the ems values
     maxval = max(val);
     % find the index of the minimum of the ems
     imaxval = find(val == maxval);
@@ -113,16 +121,14 @@ if flag==1,
     NN = regr(imaxval, :);
 end
 
-a = [];
-b = [];
-
 if isempty(NN) == 0
-    % is the same as above and should be in a function for better reuse
-    % use the provided regressor
     na = NN(1);
     nb = NN(2);
     nk = NN(3);
     j = 0;
+    jTot = (length(u) - (na + (nk - 1)) - 10) - (10 + (nk - 1)) + 1;
+    a = zeros(jTot, na + nb);
+    b = zeros(jTot, 1);
     for i = (10 + (nk - 1)):(length(u) - (na + (nk - 1)) - 10)
         j = j + 1;
         a(j, 1:na) = y(i:(i + na - 1));
