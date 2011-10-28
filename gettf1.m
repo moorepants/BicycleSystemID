@@ -29,6 +29,7 @@ function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 %
 % Author: Y. Zeyada 16 Aug 2000
 
+% filters the data
 % The next 7 lines were added by Ron Hess 11/9/01
 ts = tt(6) - tt(5);
 [bin,ain] = butter(4, 6 * ts);
@@ -49,17 +50,18 @@ if flag==1,
     regr = [];
     % for each order in the denominator of the transfer function
     for NA = 1:nn(1)
-        % for each order in the numerator of the transfer function
+        % for each order + 1 in the numerator of the transfer function
         for NB = 1:nn(2)
+            % for each delay
             for NK = -3:nn(3)
-                na=NA;
-                nb=NB;
-                nk=NK;
+                na = NA;
+                nb = NB;
+                nk = NK;
                 % build a * x = b
-                j=0;
-                a=[];
-                b=[];
-                for i = 10 + (nk - 1):length(u) - (na + (nk - 1)) - 10,
+                j = 0;
+                a = [];
+                b = [];
+                for i = (10 + (nk - 1)):(length(u) - (na + (nk - 1)) - 10),
                     j = j + 1;
                     a(j, 1:na) = y(i:i + na - 1);
                     a(j, na + 1:na + nb) = u(i + na - nk - nb + 1:i + na - nk);
@@ -67,32 +69,47 @@ if flag==1,
                 end
                 % solve
                 x = a \ b;
+
+                % from the solution get the coefficients to the numerator
+                % and denominator of the discrete transfer function
                 xy = x(na:-1:1);
                 xu = x(na + nb:-1:na + 1);
                 xy1 = zeros(1, nk-1);
 
+                % calculate the discrete transfer function
                 gdd = tf([xu'], [1 -xy' xy1], ts);
                 % convert the discrete transfer function to a continous one
                 % with a Tustin approximation
                 gg = d2c(gdd, 'tustin');
-                % cancel any poles and zeros that are close
+                % cancel any poles and zeros that are close in the
+                % continuous transfer function
                 gg = minreal(gg);
 
-                % simulate the system with the input and the computed transfer
-                % function
+                % simulate the system with the input and the computed
+                % continous transfer function
                 [yc, t, x] = lsim(gg, u, tt);
 
                 % find the error vector between the simulation output and
                 % the provided output
                 err = yc' - y;
+                % calculate square root of the sum of the squares of the
+                % error
+                % ems = sqrt(sum(err.^2))
+                % why isn't this the root mean square?
+                % i.e. rms = sqrt(sum((yc' - y).^2) / length(y))
                 ems = sqrt(err * err');
+                % append the 1 / ems (add eps incase ems is zero)
                 val = [val; 1 / (ems + eps)];
+                % append the regressors to the list
                 regr = [regr; NA NB NK];
             end
         end
     end
+    % find the minimum of the ems
     maxval = max(val);
+    % find the index of the minimum of the ems
     imaxval = find(val == maxval);
+    % return the regressor with the least output error
     NN = regr(imaxval, :);
 end
 
@@ -100,6 +117,7 @@ a = [];
 b = [];
 
 if isempty(NN) == 0
+    % is the same as above and should be in a function for better reuse
     % use the provided regressor
     na = NN(1);
     nb = NN(2);
