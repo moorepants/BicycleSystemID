@@ -1,7 +1,7 @@
 function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % Returns a transfer function from an input/output time sequence pair and a
-% regressor. This is a simple AR implementation with a delay.
+% regressor. This is a simple ARX implementation with a delay.
 %
 % Parameters
 % ----------
@@ -10,7 +10,9 @@ function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % y : matrix, size(1, n)
 %   Output time series.
 % nn : matrix, size(1, 3)
-%   Regressor [na nb nk]
+%   Regressor [na nb nk]. na is the number of poles, nb is the number of
+%   zeros + 1 and nk is the delay of the output with respect to the input in
+%   number of time steps.
 % tt : matrix, size(1, n)
 %   Time.
 % flag : boolean
@@ -26,6 +28,7 @@ function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % regmax : matrix, size(1, 3)
 %   Best regressor when used with optimization (i.e. flag=1)
 % err :
+%   The data output minus the predicted output.
 %
 % Author: Y. Zeyada 16 Aug 2000
 
@@ -52,8 +55,9 @@ if flag==1,
     for NA = 1:nn(1)
         % for each order + 1 in the numerator of the transfer function
         for NB = 1:nn(2)
-            % for each delay
+            % for each delay starting at -3
             for NK = -3:nn(3)
+                %display(sprintf('Using na=%d, nb=%d, nk=%d', NA, NB, NK))
                 na = NA;
                 nb = NB;
                 nk = NK;
@@ -106,6 +110,7 @@ if flag==1,
                 % why isn't this the root mean square?
                 % i.e. rms = sqrt(sum((yc' - y).^2) / length(y))
                 ems = sqrt(err * err');
+                %display(sprintf('ems=%f\n', ems))
                 % append the 1 / ems (add eps incase ems is zero)
                 val = [val; 1 / (ems + eps)];
                 % append the regressors to the list
