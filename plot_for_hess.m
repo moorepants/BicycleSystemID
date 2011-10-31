@@ -34,7 +34,7 @@ hold all
 bodeDiagrams = figure(1);
 blackbox = bodeplot(g);
 hessTF = tf(hess.forceTF.PhiDot.num, hess.forceTF.PhiDot.den)
-manual = bodeplot(hessTF);
+%manual = bodeplot(hessTF);
 greybox = bodeplot(ss(s.A, s.B, s.C, s.D));
 hold off
 opts = getoptions(greybox)
@@ -44,7 +44,8 @@ opts.XLim = {[1, 20]};
 opts.YLim(1) = {[-80, -30]};
 opts.YLim(2) = {[-720, 0]};
 setoptions(greybox, opts)
-legend('Black Box', 'Model - Manual', 'Grey Box - Optimal')
+%legend('Black Box', 'Model - Manual', 'Grey Box - Optimal')
+legend('Black Box', 'Grey Box')
 saveas(bodeDiagrams, 'plots/bode-for-delft-talk.png')
 
 % plot the time histories for each model versus the experimental
@@ -52,7 +53,8 @@ timeHistories = figure(2);
 yBlack = lsim(g, id.InputData, time);
 yHess = lsim(hessTF, id.InputData, time);
 yGrey = lsim(ss(s.A, s.B, s.C, s.D), id.InputData, time);
-plot(time, id.OutputData, 'k', time, yBlack, time, yHess, time, yGrey);
+%plot(time, id.OutputData, 'k', time, yBlack, time, yHess, time, yGrey);
+plot(time, id.OutputData, 'k', time, yBlack, time, yGrey);
 xlim([20, 40])
-legend('Experiment', 'Black Box', 'Model - Manual', 'Grey Box');
+legend('Experiment', 'Black Box', 'Grey Box');
 saveas(timeHistories, 'plots/time-history-for-delft-talk.png')
