@@ -29,6 +29,10 @@ hess = generate_data('Rigid', 3.17, ...
 % the transfer function fitting
 gainGuess = [39.3, -0.018, 209.895, 0.081, 0.799];
 omegaGuess = 37.0;
+% this guess comes from a solution that i got the first time i ran a
+% pavilion run
+%gainGuess = [14.1902, -1.2968, 4.7310, 0.3439, 0.4363];
+%omegaGuess = 48.1623;
 
 % use Ron's guess as a starting point
 gainGuess = manualGains;
@@ -72,3 +76,19 @@ plot(time, id.OutputData, 'k', time, yBlack, time, yHess, time, yGrey2, time, yG
 xlim([20, 40])
 legend('Experiment', 'Black Box', 'Hess', 'Grey2', 'Grey Box');
 saveas(timeHistories, 'plots/time-history-for-delft-talk.png')
+
+% make a plot of a pavilion run
+outputs = {'delta', 'phiDot', 'tDelta'};
+z = build_id_data('00516.mat', outputs);
+id = detrend(z(3.58 * 200:10.55 * 200), 1);
+gainGuess = [37.5, -0.08, 47.2, 0.0951, 0.7475];
+omegaGuess = 35;
+m = bicycle_grey('Rigid', 3.85, outputs, gainGuess, omegaGuess);
+s3 = pem(id, m);
+pavilionTime = figure();
+compare(id, s3)
+saveas(pavilionTime, 'plots/pavilion-multi3-time.png')
+paviltionBode = figure();
+pav = ss(s3.A, s3.B, s3.C, s3.D, 'InputName', s3.InputName, 'OutputName', s3.OutputName);
+bode(pav, {0.75, 20})
+saveas(pavilionTime, 'plots/pavilion-multi3-bode.png')
