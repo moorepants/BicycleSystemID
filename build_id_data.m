@@ -1,4 +1,4 @@
-function z = build_id_data(runid, outputs)
+function [z, speed] = build_id_data(runid, outputs)
 % Returns a structure with an iddata object for run with PullForce as the
 % input.
 %
@@ -13,6 +13,8 @@ function z = build_id_data(runid, outputs)
 % -------
 % z : iddata
 %   The iddata for the run.
+% speed : double
+%   The mean speed for this run.
 
 % load in the configuration variables
 config
@@ -49,6 +51,8 @@ set(z, 'InputName', meijaardInputs)
 set(z, 'InputUnit', get_units(dataInputs))
 set(z, 'OutputName', meijaardOutputs)
 set(z, 'OutputUnit', get_units(dataOutputs))
+
+speed = mean(runData.ForwardSpeed);
 
 function units = get_units(signalNames)
 % Returns the units for a given cell array of signal names.
