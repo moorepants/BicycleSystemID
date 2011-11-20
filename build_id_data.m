@@ -1,4 +1,4 @@
-function [z, speed] = build_id_data(runid, outputs)
+function [z, speed, rider] = build_id_data(runid, outputs)
 % Returns a structure with an iddata object for run with PullForce as the
 % input.
 %
@@ -21,7 +21,7 @@ config
 addpath(PATH_TO_CONTROL_MODEL)
 
 % load all the variables into the runData structure
-runData = load([PATH_TO_RUN_MAT_DIRECTORY runid]);
+runData = load([PATH_TO_RUN_MAT_DIRECTORY filesep runid]);
 
 dataInputs = {'PullForce'};
 meijaardInputs = {'fB'};
@@ -53,6 +53,7 @@ set(z, 'OutputName', meijaardOutputs)
 set(z, 'OutputUnit', get_units(dataOutputs))
 
 speed = mean(runData.ForwardSpeed);
+rider = runData.Rider;
 
 function units = get_units(signalNames)
 % Returns the units for a given cell array of signal names.

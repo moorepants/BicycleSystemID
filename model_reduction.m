@@ -1,7 +1,6 @@
 outputs = {'delta', 'phiDot'};
 
-speed = 5.0;
-z = build_id_data('00531.mat', outputs);
+[z, speed] = build_id_data('00531.mat', outputs);
 id = detrend(z(1.75 * 200:6.11 * 200), 1);
 
 %speed = 3.85
