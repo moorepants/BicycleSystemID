@@ -30,7 +30,9 @@ function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % err :
 %   The data output minus the predicted output.
 %
-% Author: Y. Zeyada 16 Aug 2000
+% Authors: Y. Zeyada 16 Aug 2000
+%          Ronald Hess 2001
+%          Jason K. Moore 2011
 
 % filters the data
 % The next 7 lines were added by Ron Hess 11/9/01
