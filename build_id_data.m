@@ -1,4 +1,4 @@
-function [z, speed, rider] = build_id_data(runid, outputs)
+function [z, speed, rider] = build_id_data(runid, outputs, varargin)
 % Returns a structure with an iddata object for run with PullForce as the
 % input.
 %
@@ -8,6 +8,8 @@ function [z, speed, rider] = build_id_data(runid, outputs)
 %   The file name of a run. (e.g. '00105.mat')
 % outputs : cell array of chars
 %   The desired list of outputs from the data.
+% directory : char, optional
+%   The path to a directory containing the data files.
 %
 % Returns
 % -------
@@ -19,6 +21,10 @@ function [z, speed, rider] = build_id_data(runid, outputs)
 % load in the configuration variables
 config
 addpath(PATH_TO_CONTROL_MODEL)
+
+if length(varargin) > 0
+    PATH_TO_RUN_MAT_DIRECTORY = varargin{1};
+end
 
 % load all the variables into the runData structure
 runData = load([PATH_TO_RUN_MAT_DIRECTORY filesep runid]);
