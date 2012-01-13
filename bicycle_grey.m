@@ -1,7 +1,7 @@
 function model = bicycle_grey(bicycle, speed, outputs, gains, neuroFreq)
-% function [data, model] = bicycle_grey(runFile, bicycle, speed, outputs, gains, neuroFreq)
-% Returns the data for a run and a compatible grey box model for the Hess
-% control model.
+% function model = bicycle_grey(bicycle, speed, outputs, gains, neuroFreq)
+%
+% Returns grey box model for the Hess control model.
 %
 % Parameters
 % ----------
@@ -12,10 +12,12 @@ function model = bicycle_grey(bicycle, speed, outputs, gains, neuroFreq)
 % outputs : cell array of chars
 %   The desired outputs of the model in Meijaard form.
 % gains : matrix, 5 x 1
-%   Either give and empty matrix [] for the gains to be calculated or
-%   provide the gains as [kDelta, kPhiDot, kPhi, kPsi, kY].
+%   Either give an empty matrix [] for the gains to be calculated or provide
+%   the gains as [kDelta, kPhiDot, kPhi, kPsi, kY]. These will be used as
+%   the initial parameter guesses.
 % neuroFreq : double
 %   The default value should be 30, otherwise specify the desired value.
+%   This will be used as an initial parameter guess.
 %
 % Returns
 % -------
@@ -23,8 +25,7 @@ function model = bicycle_grey(bicycle, speed, outputs, gains, neuroFreq)
 %   A grey box model of the bicycle/rider system with a single input,
 %   lateral force, and the outputs specified in the arguments. The initial
 %   guess for the gains and neuromuscular frequencies are the one's
-%   predicted from the Hess method otherwise they are as specified in the
-%   arguments.
+%   predicted from the Hess method unless specified in the arguments.
 
 % bring in the control model functions
 config

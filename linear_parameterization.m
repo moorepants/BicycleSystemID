@@ -11,5 +11,7 @@ C = sys.C;
 D = sys.D;
 
 [numOutputs, numStates] = size(C);
+
 K = zeros(numStates, numOutputs);
+
 x0 = zeros(numStates, 1);
