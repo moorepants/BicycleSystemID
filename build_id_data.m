@@ -1,6 +1,5 @@
-function [z, speed, rider] = build_id_data(runid, outputs, varargin)
-% Returns a structure with an iddata object for run with PullForce as the
-% input.
+function [z, speed] = build_id_data(runid, outputs, inputs, directory)
+% Returns an iddata object for the run.
 %
 % Parameters
 % ----------
@@ -8,8 +7,11 @@ function [z, speed, rider] = build_id_data(runid, outputs, varargin)
 %   The file name of a run. (e.g. '00105.mat')
 % outputs : cell array of chars
 %   The desired list of outputs from the data.
-% directory : char, optional
-%   The path to a directory containing the data files.
+% inputs : cell array of chars
+%   The desired list of inputs from the data.
+% directory : char
+%   The path to a directory containing the data files. Specificy '' if you
+%   want to use the default directory in config.m.
 %
 % Returns
 % -------
@@ -22,15 +24,19 @@ function [z, speed, rider] = build_id_data(runid, outputs, varargin)
 config
 addpath(PATH_TO_CONTROL_MODEL)
 
-if length(varargin) > 0
-    PATH_TO_RUN_MAT_DIRECTORY = varargin{1};
+if ~isempty(directory)
+    PATH_TO_RUN_MAT_DIRECTORY = directory;
 end
 
 % load all the variables into the runData structure
 runData = load([PATH_TO_RUN_MAT_DIRECTORY filesep runid]);
 
-dataInputs = {'PullForce'};
-meijaardInputs = {'fB'};
+meijaardInputs = cell(size(inputs));
+dataInputs = cell(size(inputs));
+for i = 1:length(inputs)
+    dataInputs{i} = convert_variable(inputs{i}, 'data');
+    meijaardInputs{i} = convert_variable(inputs{i}, 'meijaard');
+end
 
 meijaardOutputs = cell(size(outputs));
 dataOutputs = cell(size(outputs));
@@ -51,6 +57,8 @@ for j = 1:length(outputs)
     y(:, j) = runData.(dataOutputs{j});
 end
 
+% the sample rate has been 200 so far, but that should theorectically be
+% loaded from runData also
 z = iddata(y, u, 1 / 200);
 
 set(z, 'InputName', meijaardInputs)
