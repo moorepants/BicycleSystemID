@@ -1,3 +1,5 @@
+addpath('..')
+
 % only fit the minimal states of the Whipple model
 states = {'phi', 'delta', 'phiDot', 'deltaDot'};
 inputs = {'tDelta'};

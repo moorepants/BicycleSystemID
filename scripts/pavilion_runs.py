@@ -53,4 +53,4 @@ plt.boxplot(lowSpeeds, medSpeeds, highSpeeds)
 
 # output mat files
 for run in runs:
-    run.export('mat', directory='pavilion')
+    run.export('mat', directory='../pavilion')

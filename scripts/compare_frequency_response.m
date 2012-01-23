@@ -43,7 +43,8 @@ parameters = zeros(length(runs), 6);
 for i = 1:length(runs)
     display(sprintf('Identifying run %s', num2str(runs(i))))
     guess = [9.7676, -1.5008, 3.0039, 0.7115, 0.1670, 43.3128];
-    m = bicycle_grey(['Rigid' rider], speeds(i), outputs, guess(1:5), guess(6));
+    m = bicycle_grey(['Rigid' rider], speeds(i), outputs, guess(1:5), ...
+        guess(6));
     s = pem(data{i}, m);
     parameters(i, :) = s.par';
     models{i} = s;
