@@ -21,6 +21,9 @@ speeds = zeros(length(runs), 1);
 riders = cell(length(runs), 1);
 data = cell(length(runs), 1);
 
+outputs = {'phiDot', 'delta', 'psiDot', 'phi', 'deltaDot'};
+inputs = {'fB'};
+
 for i = 1:length(runs)
     [z, speed, rider] = build_id_data(['00' num2str(runs(i)) '.mat'], ...
         outputs, inputs, '../pavilion/mat');
@@ -34,8 +37,6 @@ uniqueRiders = unique(riders);
 display(speeds)
 
 %% find the parameters that give the best fit
-outputs = {'phiDot', 'delta', 'psiDot', 'phi', 'deltaDot'};
-inputs = {'fB'};
 
 models = cell(length(runs), 1);
 parameters = zeros(length(runs), 6);
@@ -79,7 +80,7 @@ saveas(parVar, '../plots/rider-par-var-single-speed.png')
 %% compute the input to outputs frequency responses for each model
 
 n = 200;
-w = logspace(0, 1.3, n);
+w = logspace(-1, 1.3, n);
 
 magnitudes = zeros(length(runs), length(outputs), n);
 phases = zeros(length(runs), length(outputs), n);
