@@ -1,4 +1,4 @@
-function [z, speed] = build_id_data(runid, outputs, inputs, directory)
+function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory)
 % Returns an iddata object for the run.
 %
 % Parameters
@@ -19,6 +19,8 @@ function [z, speed] = build_id_data(runid, outputs, inputs, directory)
 %   The iddata for the run.
 % speed : double
 %   The mean speed for this run.
+% rider : char
+%   The rider of the bicycle for this run.
 
 % load in the configuration variables
 config

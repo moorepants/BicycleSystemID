@@ -6,7 +6,7 @@ outputs = {'yP', 'psi', 'phi', 'delta', 'yPDot', 'psiDot', 'phiDot', 'deltaDot',
 nanbnk = zeros(length(outputs), 3);
 
 for i = 1:length(outputs)
-    z = build_id_data('00105.mat', outputs(i));
+    z = build_id_data('00105.mat', outputs(i), {'fB'});
     naGuess = 6:10;
     nbGuess = 6:10;
     nkGuess = delayest(z(200 * 8.26:200 * 44.48));
