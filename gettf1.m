@@ -1,5 +1,6 @@
 function [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
 % [g, gd, regmax, err] = gettf1(u, y, nn, tt, flag)
+%
 % Returns a transfer function from an input/output time sequence pair and a
 % regressor. This is a simple ARX implementation with a delay.
 %

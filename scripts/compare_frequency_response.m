@@ -7,6 +7,8 @@
 % for each rider. We looked at these to see if the frequency response varied
 % much even though the parameters varied.
 
+addpath('..')
+
 % these are runs from Jason, Charlie and Luke at the same speed
 jasonRuns = 527:535;
 charlieRuns = 602:611;
@@ -21,7 +23,7 @@ data = cell(length(runs), 1);
 
 for i = 1:length(runs)
     [z, speed, rider] = build_id_data(['00' num2str(runs(i)) '.mat'], ...
-        outputs, inputs, 'pavilion/mat');
+        outputs, inputs, '../pavilion/mat');
     speeds(i) = speed;
     riders{i} = rider;
     data{i} = z;
@@ -71,7 +73,7 @@ for i = 1:size(parameters, 2)
     boxplot(perRider, labels)
     ylabel(parameterNames{i})
 end
-saveas(parVar, 'plots/rider-par-var-single-speed.png')
+saveas(parVar, '../plots/rider-par-var-single-speed.png')
 
 %% compute the input to outputs frequency responses for each model
 
@@ -144,7 +146,7 @@ for i = 1:length(uniqueRiders)
 end
 
 for i = 1:length(outputs)
-    saveas(plots.(outputs{i}), ['plots/freq-compare-single-speed' outputs{i} '.png'])
+    saveas(plots.(outputs{i}), ['../plots/freq-compare-single-speed' outputs{i} '.png'])
 end
 
     %transferFunctions = tf(s, 'm');
