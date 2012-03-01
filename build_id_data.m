@@ -1,4 +1,4 @@
-function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory)
+function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory, varargin)
 % Returns an iddata object for the run.
 %
 % Parameters
@@ -12,6 +12,8 @@ function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory)
 % directory : char
 %   The path to a directory containing the data files. Specificy '' if you
 %   want to use the default directory in config.m.
+% detrend : boolean, optional
+%   If true, the data will be detrended (mean subracted).
 %
 % Returns
 % -------
@@ -63,6 +65,18 @@ end
 % loaded from runData also
 z = iddata(y, u, 1 / 200);
 
+if size(varargin, 2) > 0
+    if varargin{1} == true
+        trend = getTrend(z, 0);
+        % if one of the inputs is the lateral force, don't detrend it, as it
+        % may not be a very symmetric signal
+        if ismember('PullForce', dataInputs)
+            trend.InputOffset(find(strcmp('PullForce', dataInputs))) = 0.0;
+        end
+        z = detrend(z, trend);
+    end
+end
+
 set(z, 'InputName', meijaardInputs)
 set(z, 'InputUnit', get_units(dataInputs))
 set(z, 'OutputName', meijaardOutputs)
@@ -78,10 +92,12 @@ unitMapping = struct('SteerAngle', 'Radian', ...
                      'RollAngle', 'Radian', ...
                      'YawAngle', 'Radian', ...
                      'LateralRearContact', 'Meter', ...
+                     'LateralFrontContact', 'Meter', ...
                      'SteerRate', 'Radian/Second', ...
                      'RollRate', 'Radian/Second', ...
                      'YawRate', 'Radian/Second', ...
                      'LateralRearContactRate', 'Meter/Second', ...
+                     'LateralFrontContactRate', 'Meter/Second', ...
                      'PullForce', 'Newton', ...
                      'SteerTorque', 'Newton-Meter', ...
                      'RollTorque', 'Newton-Meter');
