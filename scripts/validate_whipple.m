@@ -22,6 +22,7 @@ armsA = [0         0    1.0000         0
          8.7171  -18.6499   -0.0368   -1.4557
          4.3115   -1.3594    2.4701   -7.0037];
 
+%%%%%Warning, this seems to be the wrong B matrix!! double check it%%%
 armsB = [0
          0
          -0.1019

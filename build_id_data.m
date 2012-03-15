@@ -13,7 +13,8 @@ function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory, va
 %   The path to a directory containing the data files. Specificy '' if you
 %   want to use the default directory in config.m.
 % detrend : boolean, optional
-%   If true, the data will be detrended (mean subracted).
+%   If true, the data will be detrended (mean subracted). The PullForce will
+%   not be detrended.
 %
 % Returns
 % -------

@@ -35,12 +35,12 @@ addpath(PATH_TO_CONTROL_MODEL)
 % The following definition of the structured model could potentially set a
 % an entry in the A, B, C, D matrices that should be free to structured
 % because in only checks for zeros and ones. There is the possibily that
-% with a certain combination of parameters one of the entries would equaly
+% with a certain combination of parameters one of the entries would equal
 % zero or one. It would be smarter to explicity define the nan for every
 % entry in the model based on the known results. This is the quicker way,
 % that should work 99% of the time (or more).
 
-% generate the bicycle model at a random stable speed for the base model
+% generate the bicycle model based on the Whipple model for the base model
 bicycleSS = bicycle_state_space(bicycle, speed, varargin{:});
 
 grey = idss(bicycleSS, 'SSParameterization', 'Structured');
