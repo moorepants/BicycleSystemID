@@ -1,3 +1,7 @@
+# Matlab
 *.mat
 *.asv
 *.p
+
+# Python
+*.pyc
