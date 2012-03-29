@@ -14,7 +14,7 @@ function whipple_structured(directory, varargin)
 %   If true, the disturbance model (Kalman gain matrix), will be estimated.
 % onesFree : boolean, optional
 %   If true all non-zero parameters in the A matrix will be estimated.
-% phiWeight : doulbe, optional
+% phiWeight : double, optional
 %   The desired weighting relative to 1 of the roll angle signal.
 
 addpath('..')
@@ -30,7 +30,7 @@ p.addParamValue('new', false);
 p.parse(directory, varargin{:});
 args = p.Results;
 
-pemArgs = {'Maxiter', 40};
+pemArgs = {'Maxiter', 100};
 pemArgs = [pemArgs {'Weighting', [args.lightenPhi, 0, 0, 0; 0, 1, 0, 0; 0, 0, 1, 0; 0, 0, 0, 1]}];
 
 tag = '';
@@ -50,6 +50,7 @@ if args.onesFree == true
 end
 
 if args.lightenPhi ~= 1
+    pemArgs = [pemArgs {'Criterion', 'Trace'}];
     tag = [tag '-phi'];
 end
 
