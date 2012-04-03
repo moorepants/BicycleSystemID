@@ -1,10 +1,331 @@
 import numpy as np
+from scipy.io import loadmat
 import bicycleparameters as bp
 import bicycledataprocessor as bdp
 from dtk.bicycle import benchmark_to_moore, pitch_from_roll_and_steer
 from LateralForce import LinearLateralForce
 
+def mean_arm(riders):
+    """Returns a mean arm model for the given riders.
+
+    Parameters
+    ----------
+    riders : list
+        All or a subset of ['Charlie', 'Jason', 'Luke']
+
+    Returns
+    -------
+    A : ndarray, shape(19, 19)
+        The mean state matrix across the given riders.
+    B : ndarray, shape(19, 4)
+        The mean input matrix across the given riders.
+
+    Notes
+    -----
+    This expects there to be a mat file in the current directory called
+    `armsAB-<rider>.mat` for each rider (e.g. `armsAB-Charlie.mat`). This file
+    should contain three things:
+
+    speed : double, size(n)
+        The constant speeds at which the state space was evaluated at.
+    stateMatrices : double, size(n, 19, 19)
+        The state matrices of the arm model for each speed.
+    inputMatrices : double, size(n, 19, 4)
+        The input matrices of the arm model for each speed.
+
+    """
+
+    data = {}
+    for rider in riders:
+        m = loadmat('armsAB-' + rider + '.mat', squeeze_me=True)
+        data[rider] = {}
+        data[rider]['speed'] = m['speed']
+        data[rider]['A'] = m['stateMatrices']
+        data[rider]['B'] = m['inputMatrices']
+
+    x, y, z = data[riders[0]]['A'].shape
+    As = np.zeros((len(riders), x, y, z))
+
+    x, y, z = data[riders[0]]['B'].shape
+    Bs = np.zeros((len(riders), x, y, z))
+
+    for i, rider in enumerate(riders):
+        As[i] = data[rider]['A']
+        Bs[i] = data[rider]['B']
+
+    return As.mean(axis=0), Bs.mean(axis=0), data[riders[0]]['speed']
+
+def enforce_symmetry(runNums, trials, rollParams, steerParams, M, C1, K0, K2,
+        H):
+    """Returns the best estimate of the free parameters in the benchmark
+    canonical matrices with respect to the given runs. The symmetry in the M
+    and K0 matrices is enforce by finding the terms in the roll equation first
+    and fixing the result in the steer equation.
+
+    Parameters
+    ----------
+    runNums : list
+        A list of run numbers to be used to formulate the least squares
+        problem.
+    trials : dictionary
+        A dictionary of bicycledataprocess.Run objects. All in `runNums` must
+        be present. These trials have an additional attribute `H` which holds
+        the value for the bicycle model.
+    rollParams : list
+        The free parameters in the roll equation.
+    steerParmams : list
+        The free parameters in the steer equation.
+    M, C1, K0, K2, H : ndarrays
+        The the parameters not in `rollParams` and `steerParams` will be fixed
+        to the values in these arrays.
+
+    Returns
+    -------
+    M_id, C1_id, K0_id, K2_id, H_id : ndarrays
+        The identified model for the given set of runs.
+
+    """
+
+    rollAs, rollBs = lstsq_A_B(trials, rollParams)
+    totRollA, totRollB = stack_A_B(rollAs, rollBs, runNums)
+    rollSol = np.linalg.lstsq(totRollA, totRollB)[0]
+
+    overwrite = {'Mdp': rollSol[rollParams.index('Mpd')],
+                 'K0dp': rollSol[rollParams.index('K0pd')]}
+    steerAs, steerBs = lstsq_A_B(trials, steerParams, overwrite=overwrite)
+    totSteerA, totSteerB = stack_A_B(steerAs, steerBs, runNums)
+    steerSol = np.linalg.lstsq(totSteerA, totSteerB)[0]
+
+    M_mod = M.copy()
+    M_mod[1, 0] = overwrite['Mdp']
+    K0_mod = K0.copy()
+    K0_mod[1, 0] = overwrite['K0dp']
+
+    idMatrices = benchmark_identified_matrices((rollParams,
+        steerParams), (rollSol, steerSol), M_mod, C1, K0_mod, K2, H)
+
+    return idMatrices
+
+def load_trials(runs, H):
+    """Returns a dictionary of Run objects which were successfully computed and
+    list of runs which had errors.
+
+    Parameters
+    ----------
+    runs : list
+        A list of run numbers to try to load.
+    H : dictionary
+        The H vector for the lateral force contributions to steer torque and
+        roll torque for each rider.
+
+    Returns
+    -------
+    trials : dictionary
+        A dictionary of bicycledataprocess.Run objects. All in `runNums` must
+        be present. These trials have an additional attribute `H` which holds
+        the value for the bicycle model.
+    errors : list
+        A list of run numbers that had errors (primarily in the bump finding.
+
+
+    """
+    trials = {}
+    errors = []
+    dataset = bdp.DataSet()
+    for i, r in enumerate(runs):
+        try:
+            trial = bdp.Run(r, dataset, filterFreq=15.)
+        except bdp.bdpexceptions.TimeShiftError:
+            errors.append(r)
+        except IndexError:
+            errors.append(r)
+        else:
+            trial.H = H[trial.metadata['Rider']]
+            trials[r] = trial
+
+    return trials, errors
+
+def mean_canon(riders, canon, H):
+    """Returns the mean benchmark canoncial matrices across the given riders.
+
+    Parameters
+    ----------
+    riders : list
+        A list of riders to take the mean with respect to.
+    canon : dictionary
+        The M, C1, K0, and K2 matrices for each rider.
+    H : dictionary
+        The H vector for each rider.
+
+    Returns
+    -------
+    M, C1, K0, K2, H : ndarrays
+        The mean matrices across riders.
+
+    """
+    Ms = np.zeros((len(riders), 2, 2))
+    C1s = np.zeros((len(riders), 2, 2))
+    K0s = np.zeros((len(riders), 2, 2))
+    K2s = np.zeros((len(riders), 2, 2))
+    Hs = np.zeros((len(riders), 2, 1))
+
+    for i, rider in enumerate(riders):
+        M, C1, K0, K2 = canon[rider]
+        h = H[rider]
+        Ms[i] = M
+        C1s[i] = C1
+        K0s[i] = K0
+        K2s[i] = K2
+        Hs[i] = h.reshape(2, 1)
+
+    return Ms.mean(0), C1s.mean(0), K0s.mean(0), K2s.mean(0), Hs.mean(0)
+
+def load_benchmark_canon(riders):
+    """Returns the benchmark canonical matrices for each rider.
+
+    Parameters
+    ----------
+    riders : list
+        A list of riders from ['Charlie', 'Jason', 'Luke'].
+
+    Returns
+    -------
+    canon : dictionary
+        The M, C1, K0, and K2 matrices for each rider on the instrumented
+        bicycle.
+
+    """
+    path = '/media/Data/Documents/School/UC Davis/Bicycle Mechanics/BicycleParameters/data'
+    canon = {}
+    for rider in riders:
+        if rider == 'Jason':
+            bName = 'Rigid'
+        else:
+            bName= 'Rigidcl'
+        bicycle = bp.Bicycle(bName, path)
+        bicycle.add_rider(rider)
+        canon[rider] = bicycle.canonical(nominal=True)
+
+    return canon
+
+def lateral_force_contribution(riders):
+    """Returns the lateral force contribution vector.
+
+    Parameters
+    ----------
+    riders : list
+        A list of riders from ['Charlie', 'Jason', 'Luke'].
+
+    Returns
+    -------
+    H : dictionary
+        The lateral force contribution vector for the canonical form for each
+        each rider.
+
+    """
+    H = {}
+    for rider in riders:
+        A, B, F = whipple_state_space(rider, 1.0)
+        H[rider] = np.dot(np.linalg.inv(B[2:]), F[2:])
+
+    return H
+
+def lstsq_A_B(trials, params, overwrite=None):
+    """Returns the known matrices for the least squares problems for multiple
+    Runs.
+
+    Parameters
+    ----------
+    trials : dictionary
+        A dictionary of bicycledataprocessor.Run objects with the keyword being
+        the run number.
+    params : list
+        This should be a list of either the free roll parameters or free steer
+        parameters.
+    overwrite : dictionary
+        Specify this dictionary of matrix entries if you want to overwrite the
+        any fixed values for the right hand side of the Ax=B.
+
+    Returns
+    -------
+    eachA : dictionary
+        The left hand side matrix, A, for each trial in Ax=B.
+    eachB : dicationary
+        The right hand side vector, B, for each trial in Ax=B.
+
+    """
+
+    eachA = {}
+    eachB = {}
+
+    for num, trial in trials.items():
+        timeSeries = benchmark_time_series(trial, subtractMean=True)
+        M, C1, K0, K2 = trial.bicycle.canonical(nominal=True)
+        fixedValues = benchmark_canon_to_dict(M, C1, K0, K2, trial.H)
+
+        if overwrite is not None:
+            for k, v in overwrite.items():
+                fixedValues[k] = v
+
+        A, B = benchmark_lstsq_matrices(params, timeSeries, fixedValues)
+
+        eachA[num] = A
+        eachB[num] = B
+
+    return eachA, eachB
+
+def stack_A_B(As, Bs, runNums):
+    """Returns the right and left hand side matrices for a set of runs.
+
+    Parameters
+    ----------
+    As : dictionary
+        A dictionary of the left hand side matrices for each run.
+    Bs : dictionary
+        A dictionary of the right hand side matrices for each run.
+    runNums : list
+        The run numbers to include in the matrices.
+
+    Returns
+    -------
+    totA : ndarray
+        The left hand side matrix for the set of runs.
+    totB : ndarray
+        The right hand side matric for the set of runs.
+
+    """
+    for num in runNums:
+        A = As[num]
+        B = Bs[num]
+
+        try:
+            totA = np.vstack((totA, A))
+            totB = np.hstack((totB, B))
+        except NameError:
+            totA = A
+            totB = B
+
+    return totA, totB
+
 def select_runs(riders, maneuvers, environments):
+    """Returns a list of runs given a set of conditions.
+
+    Parameters
+    ----------
+    riders : list
+        All or a subset of ['Charlie', 'Jason', 'Luke'].
+    maneuvers : list
+        All or a subset of ['Balance', 'Balance With Disturbance', 'Track
+        Straight Line', 'Track Straight Line With Disturbance'].
+    environments : list
+        All or a subset of ['Horse Treadmill', 'Pavillion Floor'].
+
+    Returns
+    -------
+    runs : list
+        List of run numbers for the given conditions.
+
+    """
 
     dataset = bdp.DataSet()
     dataset.open()
@@ -320,6 +641,8 @@ def whipple_state_space(rider, speed):
     B = B[:, 1:]
 
     return A, B, F
+
+## the following deal with finding the entries to M, C and K
 
 def time_series(trial, F):
     coordinates = np.vstack((trial.taskSignals['RollAngle'],
