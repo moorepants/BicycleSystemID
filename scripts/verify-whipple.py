@@ -8,6 +8,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import bicycledataprocessor as bdp
+from dtk.bicycle import benchmark_state_space
 
 # load the experimental data
 dataset = bdp.DataSet(fileName='../../BicycleDataProcessor/InstrumentedBicycleData.h5')
@@ -76,6 +77,19 @@ meB = np.array([[ 0.00942706974495, 0.07229608],
                 [ -0.0971149781346, 1.727447]])
 meU = np.dot(np.linalg.inv(meB), (xd - np.dot(meA, x)))
 
+# this is a model from the benchmark canonical identification procedure
+bcM = np.array([[ 129.86277082,    2.28375768],
+              [   2.28375768,    0.20003257]])
+bcC1 = np.array([[  0.,          23.94008131],
+                 [ -0.88845094,   1.73368327]])
+bcK0 = np.array([[-114.59019659,   -3.91797216],
+                 [  -3.91797216,   -0.66780731]])
+
+bcK2 = np.array([[   0.,          102.9447477 ],
+                [   0.,            2.33973324]])
+bcA, bcB = benchmark_state_space(bcM, bcC1, bcK0, bcK2, speed, 9.81)
+bcU = np.dot(np.linalg.inv(bcB[2:, :]), (xd - np.dot(bcA[2:, :], x)))
+
 # plot the results
 fig = plt.figure()
 
@@ -85,10 +99,12 @@ ax1 = fig.add_subplot(2, 1, 1)
 ax1.plot(time, u[0, :],
          time, armU[0, :],
          time, idU[0, :],
-         time, meU[0, :])
+         time, meU[0, :],
+         time, bcU[0, :])
 ax1.set_ylabel('Roll Torque [Nm]')
 ax1.set_xlabel('Time [s]')
-ax1.legend(('Whipple Model Prediction', 'Arm Model Prediction', 'Identified', 'Mixed Effects'))
+ax1.legend(('Whipple Model Prediction', 'Arm Model Prediction', 'Identified',
+'Mixed Effects', 'Canon ID'))
 leg1 = ax1.get_legend()
 plt.setp(leg1.get_texts(), fontsize='xx-small')
 
@@ -97,11 +113,12 @@ ax2.plot(time, steerTorque, 'k',
          time, u[1, :],
          time, armU[1, :],
          time, idU[1, :],
-         time, meU[1, :])
+         time, meU[1, :],
+         time, bcU[0, :])
 ax2.set_ylabel('Steer Torque [Nm]')
 ax2.set_xlabel('Time [s]')
 ax2.legend(('Experimental Measurment', 'Whipple Model Prediction',
-    'Arm Model Prediction', 'Identified Model', 'Mixed Effects'))
+    'Arm Model Prediction', 'Identified Model', 'Mixed Effects', 'CanonID'))
 leg2 = ax2.get_legend()
 plt.setp(leg2.get_texts(), fontsize='xx-small')
 
