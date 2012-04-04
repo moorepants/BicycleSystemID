@@ -5,6 +5,46 @@ import bicycledataprocessor as bdp
 from dtk.bicycle import benchmark_to_moore, pitch_from_roll_and_steer
 from LateralForce import LinearLateralForce
 
+def benchmark_canonical_variance(A, B, xhat, resid):
+    """Returns the variance in the ordinary least squares fit and the
+    covariance matrix of the estimated parameters.
+
+    Parameters
+    ----------
+    A : ndarray, shape(n,d)
+        The left hand side matrix in Ax=B.
+    B : ndarray, shape(n,)
+        The right hand side vector in Ax=B.
+    xhat : ndarray, shape(d)
+        The best estimate of the free parameters.
+
+    Returns
+    -------
+    var : float
+        The variance of the fit.
+    covar : ndarray, shape(d,d)
+        The covariance of the parameters.
+
+    """
+    # I'm getting a memory error when trying to do this dot product even though
+    # I have plenty of memory available.
+    #Bhat = np.dot(A, xhat)
+    # or this gives an error because I gave the wrong type for Bhat
+    #Bhat = np.zeros_like(B)
+    #np.dot(A, xhat, out=Bhat)
+    #e = B - Bhat
+    #del Bhat
+    #var = np.dot(e.T, e) / (A.shape[0] - A.shape[1])
+
+    # I am pretty sure that the residues from numpy.linalg.lstsq is the SSE
+    # (the residual sum of squares). So my calculation above is not needed.
+
+    var = resid / (A.shape[0] - A.shape[1])
+
+    covar = var * np.linalg.inv(np.dot(A.T, A))
+
+    return covar
+
 def mean_arm(riders):
     """Returns a mean arm model for the given riders.
 
@@ -81,20 +121,29 @@ def enforce_symmetry(runNums, trials, rollParams, steerParams, M, C1, K0, K2,
 
     Returns
     -------
-    M_id, C1_id, K0_id, K2_id, H_id : ndarrays
-        The identified model for the given set of runs.
+    idMatrices : tuple
+        The identified model (M_id, C1_id, K0_id, K2_id, H_id) for the given
+        set of runs.
+    rollCoVar : ndarray
+        The covariance matrix of the identified roll parameters.
+    steerCoVar : ndarray
+        The covariance matrix of the identified steer parameters.
 
     """
 
     rollAs, rollBs = lstsq_A_B(trials, rollParams)
     totRollA, totRollB = stack_A_B(rollAs, rollBs, runNums)
-    rollSol = np.linalg.lstsq(totRollA, totRollB)[0]
+    rollSol, rollVar = np.linalg.lstsq(totRollA, totRollB)[:2]
+    rollCoVar = benchmark_canonical_variance(totRollA, totRollB,
+            rollSol, rollVar[0])
 
     overwrite = {'Mdp': rollSol[rollParams.index('Mpd')],
                  'K0dp': rollSol[rollParams.index('K0pd')]}
     steerAs, steerBs = lstsq_A_B(trials, steerParams, overwrite=overwrite)
     totSteerA, totSteerB = stack_A_B(steerAs, steerBs, runNums)
-    steerSol = np.linalg.lstsq(totSteerA, totSteerB)[0]
+    steerSol, steerVar = np.linalg.lstsq(totSteerA, totSteerB)[:2]
+    steerCoVar = benchmark_canonical_variance(totSteerA, totSteerB,
+            steerSol, steerVar[0])
 
     M_mod = M.copy()
     M_mod[1, 0] = overwrite['Mdp']
@@ -104,7 +153,7 @@ def enforce_symmetry(runNums, trials, rollParams, steerParams, M, C1, K0, K2,
     idMatrices = benchmark_identified_matrices((rollParams,
         steerParams), (rollSol, steerSol), M_mod, C1, K0_mod, K2, H)
 
-    return idMatrices
+    return idMatrices, rollCoVar, steerCoVar
 
 def load_trials(runs, H):
     """Returns a dictionary of Run objects which were successfully computed and
