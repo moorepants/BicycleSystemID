@@ -1,9 +1,10 @@
-addpath('..')
+addpath('../../src/matlab')
 
 % only fit the minimal states of the Whipple model
 states = {'phi', 'delta', 'phiDot', 'deltaDot'};
 inputs = {'tDelta'};
 outputs = {'phi', 'delta', 'phiDot', 'deltaDot'};
+outputs = {'phiDot', 'deltaDot'};
 
 % load the data
 [data, v] = build_id_data('00638.mat', outputs, inputs, '');

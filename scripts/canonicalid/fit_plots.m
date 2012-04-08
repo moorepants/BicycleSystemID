@@ -34,7 +34,7 @@ armModel = idss(armSS);
 % all riders and both environments @ 2.0092 m/s
 identifiedModel = whippleModel;
 
-% run 538
+% run 588
 %identifiedModel.A = [0, 0, 1, 0;
                      %0, 0, 0, 1;
                      %6.60296243, -3.31536843, -1.96360195e-01, -8.02745331e-02;
