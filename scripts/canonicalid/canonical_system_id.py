@@ -1,9 +1,187 @@
 import numpy as np
 from scipy.io import loadmat
+from uncertainties import ufloat
 import bicycleparameters as bp
 import bicycledataprocessor as bdp
 from dtk.bicycle import benchmark_to_moore, pitch_from_roll_and_steer
 from LateralForce import LinearLateralForce
+
+def create_rst_table(tableData, roll, steer, fileName=None):
+    """Returns a reStructuredText version of the table data.
+
+    Parameters
+    ----------
+    tableData : list
+        A list of rows for the table.
+    roll : list
+        The free parameters in the roll torque equation.
+    steer : list
+        The free parameters in the steer torque equation.
+    fileName : string
+        If a path to a file is given, the table will be written to that
+        file.
+
+    Returns
+    -------
+    rstTable : string
+        reStructuredText version of the table.
+
+    """
+
+    latexMap = {'Mpp' : r'M_{\phi\phi}',
+                'Mpd' : r'M_{\phi\delta}',
+                'Mdp' : r'M_{\delta\phi}',
+                'Mdd' : r'M_{\delta\delta}',
+                'C1pp' : r'C_{1\phi\phi}',
+                'C1pd' : r'C_{1\phi\delta}',
+                'C1dp' : r'C_{1\delta\phi}',
+                'C1dd' : r'C_{1\delta\delta}',
+                'K0pp' : r'K_{0\phi\phi}',
+                'K0pd' : r'K_{0\phi\delta}',
+                'K0dp' : r'K_{0\delta\phi}',
+                'K0dd' : r'K_{0\delta\delta}',
+                'K2pp' : r'K_{2\phi\phi}',
+                'K2pd' : r'K_{2\phi\delta}',
+                'K2dp' : r'K_{2\delta\phi}',
+                'K2dd' : r'K_{2\delta\delta}',
+                'HpF' : r'H_{\phi F}',
+                'HdF' : r'H_{\delta F}',
+                }
+
+    # top row
+    head = [''] + [':math:`' + latexMap[p] + '`' for p in (roll + steer)]
+    subhead = [['R', 'E'] + ['Value', ':math:`\sigma`', '% Difference'] * (len(roll) +
+            len(steer))]
+
+    allData = subhead + tableData
+
+    # find the longest string in each column
+    largest = [len(string) for string in tableData[0]]
+    for row in allData:
+        colSize = [len(string) for string in row]
+        for i, pair in enumerate(zip(colSize, largest)):
+            if pair[0] > pair[1]:
+                largest[i] = pair[0]
+
+    rstTable = ''
+
+    rstTable += '+' + (sum(largest[:2]) + 5) * '=' + '+'
+
+    for i in range(len(head[1:])):
+        rstTable += (sum(largest[i * 3 + 2:i * 3 + 5]) + 8) * '=' + '+'
+    rstTable += '\n'
+
+    rstTable += '|' + (sum(largest[:2]) + 5) * ' ' + '|'
+    for i, par in enumerate(head[1:]):
+        x = sum(largest[i * 3 + 2:i * 3 + 5]) + 8 - len(par) - 1
+        rstTable += ' ' + par + ' ' * x + '|'
+    rstTable += '\n'
+
+    for j, row in enumerate(allData):
+        if j in [0, 1]:
+            dash = '='
+        else:
+            dash = '-'
+
+        line = ''
+        for i in range(len(row)):
+            line += '+' + dash * (largest[i] + 2)
+
+        line += '+\n|'
+        for i, item in enumerate(row):
+            line += ' ' + item + ' ' * (largest[i] - len(item)) + ' |'
+        line += '\n'
+        rstTable += line
+
+    for num in largest:
+       rstTable += '+' + dash * (num + 2)
+    rstTable += '+'
+
+    if fileName is not None:
+        f = open(fileName, 'w')
+        f.write(rstTable)
+        f.close()
+
+    return rstTable
+
+def table_data(roll, steer, mat, cov):
+    """Returns a data set of string values for text output and formatting into
+    a table.
+
+    Parameters
+    ----------
+    roll : list
+        The free parameters in the roll torque equation.
+    steer : list
+        The free parameters in the steer torque equation.
+    mat : dictionary
+        A dictionary of the resulting models.
+    cov : dictionary
+        A dictionary of the resulting covariance matrices of the free
+        parameters.
+
+    Returns
+    -------
+    data : list
+        A list of rows for the table.
+
+    """
+    data = []
+    allRiders = ['Charlie', 'Jason', 'Luke']
+    # create the comparison models
+    canon = load_benchmark_canon(allRiders)
+    H = lateral_force_contribution(allRiders)
+
+    def add_to_row(row, covar):
+
+        def add_par_to_row(i, row, parameters):
+            value = values[par]
+            sigma = np.sqrt(covar[i].diagonal()[parameters.index(par)])
+            uVal = ufloat((value, sigma))
+            uStr = bp.tables.uround(uVal)
+            valStr, sigStr = uStr.split('+/-')
+            diff = (value - theory[par]) / theory[par]
+            row += [valStr, sigStr, '{:.1%}'.format(diff)]
+
+        for par in roll:
+            add_par_to_row(0, row, roll)
+        for par in steer:
+            add_par_to_row(1, row, steer)
+
+    for k, v in mat.items():
+        if k == 'All':
+            row = ['A', 'A']
+            values = benchmark_canon_to_dict(*v)
+            mean = mean_canon(allRiders, canon, H)
+            theory = benchmark_canon_to_dict(*mean)
+            covar = cov[k]
+            add_to_row(row, covar)
+            data.append(row)
+        elif k == 'Horse Treadmill' or k == 'Pavillion Floor':
+            row = ['A', k[0]]
+            values = benchmark_canon_to_dict(*v)
+            mean = mean_canon(allRiders, canon, H)
+            theory = benchmark_canon_to_dict(*mean)
+            covar = cov[k]
+            add_to_row(row, covar)
+            data.append(row)
+        elif k in allRiders:
+            M, C, K1, K2 = canon[k]
+            theory = benchmark_canon_to_dict(M, C, K1, K2, H[k])
+            for envName, envVal in v.items():
+                if envName == 'All':
+                    row = [k[0], 'A']
+                    values = benchmark_canon_to_dict(*envVal)
+                    covar = cov[k][envName]
+                    add_to_row(row, covar)
+                    data.append(row)
+                else:
+                    row = [k[0], envName[0]]
+                    values = benchmark_canon_to_dict(*envVal)
+                    covar = cov[k][envName]
+                    add_to_row(row, covar)
+                    data.append(row)
+    return data
 
 def benchmark_canonical_variance(A, B, xhat, resid):
     """Returns the variance in the ordinary least squares fit and the
