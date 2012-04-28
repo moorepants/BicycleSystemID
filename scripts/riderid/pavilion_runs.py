@@ -1,17 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import bicycledataprocessor as bdp
 
-from bicycledataprocessor import main
-
-# the path to the potentially necessary files
-pathToBicycle = '/media/Data/Documents/School/UC Davis/Bicycle Mechanics/'
-pathToDB = pathToBicycle + 'BicycleDataProcessor/InstrumentedBicycleData.h5'
-pathToH5 = pathToBicycle + 'BicycleDAQ/data/h5'
-pathToPar = pathToBicycle + 'BicycleParameters/data'
-pathToCorrupt = pathToBicycle + 'BicycleDataProcessor/data-corruption.csv'
-
-data = main.DataSet(fileName=pathToDB, pathToH5=pathToH5,
-        pathToCorruption=pathToCorrupt)
+data = bdp.DataSet()
 
 # open the database for reading
 data.open()
@@ -20,7 +11,7 @@ runTable = data.database.root.runTable
 
 def query(row):
 
-    man = row['Maneuver'] == 'Track Straight Line With Disturbance'
+    man = row['Maneuver'].endswith('Disturbance')
     env = row['Environment'] == 'Pavillion Floor'
     cor = row['corrupt'] is not True and row['RunID'] not in range(326, 469)
     bik = row['Bicycle'] == 'Rigid Rider'
@@ -35,7 +26,7 @@ good = [row['RunID'] for row in runTable if query(row)]
 runs = []
 for runNum in good:
     try:
-        runs.append(main.Run(runNum, data.database, pathToPar, filterFreq=30.))
+        runs.append(bdp.Run(runNum, data.database, filterFreq=15.))
     except:
         pass
 
@@ -53,4 +44,4 @@ plt.boxplot(lowSpeeds, medSpeeds, highSpeeds)
 
 # output mat files
 for run in runs:
-    run.export('mat', directory='../pavilion')
+    run.export('mat', directory='../../data/pavilion')

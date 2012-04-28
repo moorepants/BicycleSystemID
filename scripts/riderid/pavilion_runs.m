@@ -1,8 +1,8 @@
-contents = what('pavilion/mat');
+contents = what('../../data/riderid/pavilion');
 matFiles = contents.mat;
 outputs = {'phiDot'};
 
-load('guesses.mat')
+load('../../guesses.mat')
 
 % speed, kDelta, kPhiDot, kPhi, kPsi, kY, wnm
 %3.85, 11.1857, -1.6166, 3.7822, 0.4393, 0.3056, 45.0976
@@ -13,10 +13,10 @@ load('guesses.mat')
 speedGuesses = [speedGuesses; 3.85; 4.959; 5.667; 5.585; 1.0];
 
 moreGuesses = [11.1857 -1.6166 3.7822 0.4393 0.3056 45.0976
-11.1048 -1.0180 3.8664 0.4166 0.1014 42.9452
-4.0937 -3.2782 1.9031 0.7296 0.1174 42.2266
-3.0943 -4.5908 1.5155 0.9361 0.0462 40.9320
-37.5 -0.08 47.2 0.0951 0.7475 35];
+               11.1048 -1.0180 3.8664 0.4166 0.1014 42.9452
+               4.0937 -3.2782 1.9031 0.7296 0.1174 42.2266
+               3.0943 -4.5908 1.5155 0.9361 0.0462 40.9320
+               37.5 -0.08 47.2 0.0951 0.7475 35];
 
 parameterGuesses = [parameterGuesses; moreGuesses];
 

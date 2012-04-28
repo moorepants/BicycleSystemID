@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # This script builds a directory of processed runs intended for identification
-# of the bicycle model.
+# of the rider controller. Only disturbance runs are included.
 
 import bicycledataprocessor as bdp
 
@@ -14,9 +14,7 @@ runs = []
 for row in table.iterrows():
     con = []
     con.append(row['Rider'] in ['Jason', 'Charlie', 'Luke'])
-    con.append(row['Maneuver'] == 'Balance' or
-               row['Maneuver'] == 'Track Straight Line' or
-               row['Maneuver'] == 'Balance With Disturbance' or
+    con.append(row['Maneuver'] == 'Balance With Disturbance' or
                row['Maneuver'] == 'Track Straight Line With Disturbance')
     con.append(row['corrupt'] is not True)
     con.append(int(row['RunID']) > 100)
@@ -30,7 +28,6 @@ otherErrors = []
 for r in runs:
     try:
         trial = bdp.Run(r, dataset, filterFreq=15.)
-        #trial.verify_time_sync(show=False, saveDir='time-sync-plots')
     except bdp.bdpexceptions.TimeShiftError:
         timeShiftErrors.append(r)
         dataset.close()
@@ -38,14 +35,7 @@ for r in runs:
         otherErrors.append(r)
         dataset.close()
     else:
-        trial.export('mat')
+        trial.export('mat', directory='../../data/riderid/disturbance-runs')
 
-f = open('time-shift-errors.txt', 'w')
-for error in timeShiftErrors:
-    f.write(str(error) + '\n')
-f.close()
-
-f = open('other-errors.txt', 'w')
-for error in otherErrors:
-    f.write(str(error) + '\n')
-f.close()
+print timeShiftErrors
+print otherErrors

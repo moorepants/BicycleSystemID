@@ -1,5 +1,5 @@
-function guess = guess_from_loop_closure(bicycle, rider, speed, calculation)
-% function guess = guess_from_loop_closure(bicycle, rider, speed, calculation)
+function guess = guess_from_loop_closure(bicycle, rider, speed, calculation, varargin)
+% function guess = guess_from_loop_closure(bicycle, rider, speed, calculation, varargin)
 %
 % Parameters
 % ----------
@@ -16,6 +16,8 @@ function guess = guess_from_loop_closure(bicycle, rider, speed, calculation)
 %   optimal solution with the loop closure technique and 'estimate'
 %   interpolates from previous found gain values. 'full' takes longer but
 %   may be more accurate.
+% gainGuess : double, 1 x 5
+%   A starting guess for the gain search.
 %
 % Returns
 % -------
@@ -26,14 +28,25 @@ function guess = guess_from_loop_closure(bicycle, rider, speed, calculation)
 config
 addpath(PATH_TO_CONTROL_MODEL)
 
+if size(varargin, 2) > 0
+    extra = {'gainGuess', varargin{1};
+else
+    extrz = {};
+end
+
 bicycleRider = [bicycle rider];
 
 wnm = 30;
 
 if strcmp(calculation, 'full')
-    data = generate_data(bicycleRider, speed, 'simulate', 0, ...
-        'loopTransfer', 0, 'handlingQuality', 0, 'forceTransfer', {}, ...
-        'fullSystem', 0, 'neuroFreq', wnm);
+    data = generate_data(bicycleRider, speed, ...
+                         'simulate', 0, ...
+                         'loopTransfer', 0, ...
+                         'handlingQuality', 0, ...
+                         'forceTransfer', {}, ...
+                         'fullSystem', 0, ...
+                         'neuroFreq', wnm, ..
+                         extra{:});
     guess = [data.modelPar.kDelta,
              data.modelPar.kPhiDot,
              data.modelPar.kPhi,

@@ -1,4 +1,4 @@
-function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory, varargin)
+function [z, meta] = build_id_data(runid, outputs, inputs, directory, varargin)
 % Returns an iddata object for the run.
 %
 % Parameters
@@ -20,10 +20,13 @@ function [z, speed, rider] = build_id_data(runid, outputs, inputs, directory, va
 % -------
 % z : iddata
 %   The iddata for the run.
-% speed : double
-%   The mean speed for this run.
-% rider : char
-%   The rider of the bicycle for this run.
+% meta : structure
+%   speed : double
+%       The mean speed for this run.
+%   rider : char
+%       The rider of the bicycle for this run.
+%   maneuver : char
+%       The maneuver name.
 
 % load in the configuration variables
 config
@@ -83,8 +86,13 @@ set(z, 'InputUnit', get_units(dataInputs))
 set(z, 'OutputName', meijaardOutputs)
 set(z, 'OutputUnit', get_units(dataOutputs))
 
-speed = mean(runData.ForwardSpeed);
-rider = runData.Rider;
+meta.speed = mean(runData.ForwardSpeed);
+meta.rider = runData.Rider;
+meta.maneuver = runData.Maneuver;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Sub Functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function units = get_units(signalNames)
 % Returns the units for a given cell array of signal names.

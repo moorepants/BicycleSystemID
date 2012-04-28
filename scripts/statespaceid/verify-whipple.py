@@ -6,16 +6,15 @@
 # compares it to the measured steer torque.
 
 import numpy as np
+from scipy.io import loadmat
 import matplotlib.pyplot as plt
 import bicycledataprocessor as bdp
 from dtk.bicycle import benchmark_state_space
 
 # load the experimental data
-dataset = bdp.DataSet(fileName='../../BicycleDataProcessor/InstrumentedBicycleData.h5')
+dataset = bdp.DataSet()
 
-pathToPar = '../../BicycleParameters/data'
-
-trial = bdp.Run('00638', dataset, pathToPar, filterFreq=10.0)
+trial = bdp.Run('00638', dataset, filterFreq=10.0)
 
 speed = trial.taskSignals['ForwardSpeed'][50:-50].mean()
 
@@ -46,15 +45,22 @@ u = np.dot(M, qdd) + np.dot(C, qd) + np.dot(K, q)
 # compute the inputs from the Whipple model with rider arms
 # this is only valid for run 638 (i.e. Luke on Rigidcl at the measured speed)
 
-armA = np.array([[8.7171, -18.8791, -0.0370, -1.4646], # phi
-                 [4.3115, -1.5062, 2.4852, -7.0466]]) # delta
-# rows: phi, delta, columns: Tphi, Tdelta
-armB = np.array([[0.0081, -0.0241],
-                 [-0.0241, 1.6196]])
+pathToArmData = '/media/Data/Documents/School/UC Davis/dissertation/src/extensions/arms'
+armData = loadmat(pathToArmData + '/armsAB-' + trial.metadata['Rider'] +
+    '.mat', squeeze_me=True)
+
+indice = round(speed * 10.)
+armA = armData['stateMatrices'][indice]
+armB = armData['inputMatrices'][indice][:, [0, 1]]
+
+# for some reason I'm getting an error when trying to run the inv routine on
+# armB with respect to the byte order
+armB = armB.byteswap().newbyteorder()
+
 xd = qdd
 x = np.vstack((q, qd))
 
-armU = np.dot(np.linalg.inv(armB), (xd - np.dot(armA, x)))
+armU = np.dot(np.linalg.inv(armB[2:]), (xd - np.dot(armA[2:], x)))
 
 # this is the model that I identified for this run (except for the roll torque
 # entries in the B matrix, they are copied from the Whipple model)
@@ -78,17 +84,14 @@ meB = np.array([[ 0.00942706974495, 0.07229608],
 meU = np.dot(np.linalg.inv(meB), (xd - np.dot(meA, x)))
 
 # this is a model from the benchmark canonical identification procedure
-bcM = np.array([[ 129.86277082,    2.28375768],
-              [   2.28375768,    0.20003257]])
-bcC1 = np.array([[  0.,          23.94008131],
-                 [ -0.88845094,   1.73368327]])
-bcK0 = np.array([[-114.59019659,   -3.91797216],
-                 [  -3.91797216,   -0.66780731]])
-
-bcK2 = np.array([[   0.,          102.9447477 ],
-                [   0.,            2.33973324]])
-bcA, bcB = benchmark_state_space(bcM, bcC1, bcK0, bcK2, speed, 9.81)
-bcU = np.dot(np.linalg.inv(bcB[2:, :]), (xd - np.dot(bcA[2:, :], x)))
+pathToIdMat = '/media/Data/Documents/School/UC Davis/Bicycle Mechanics/CanonicalBicycleID/data/idMatrices.p'
+import cPickle
+with open(pathToIdMat) as f:
+    idMat = cPickle.load(f)
+bcM, bcC1, bcK0, bcK2, bcH = idMat['L-P']
+bcC = speed * bcC1
+bcK = bcK0 * trial.bicycleRiderParameters['g'] + bcK2 * speed ** 2
+bcU = np.dot(bcM, qdd) + np.dot(bcC, qd) + np.dot(bcK, q)
 
 # plot the results
 fig = plt.figure()
@@ -114,7 +117,7 @@ ax2.plot(time, steerTorque, 'k',
          time, armU[1, :],
          time, idU[1, :],
          time, meU[1, :],
-         time, bcU[0, :])
+         time, bcU[1, :])
 ax2.set_ylabel('Steer Torque [Nm]')
 ax2.set_xlabel('Time [s]')
 ax2.legend(('Experimental Measurment', 'Whipple Model Prediction',
@@ -122,5 +125,5 @@ ax2.legend(('Experimental Measurment', 'Whipple Model Prediction',
 leg2 = ax2.get_legend()
 plt.setp(leg2.get_texts(), fontsize='xx-small')
 
-fig.savefig('../plots/torque-comparison.png')
+#fig.savefig('../plots/torque-comparison.png')
 fig.show()
