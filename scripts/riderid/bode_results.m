@@ -1,3 +1,6 @@
+% This loads the many tranfer functions for each run and plots a ton of Bode
+% plots.
+
 results = load('../../data/riderid/bestControllerIdResults.mat');
 transferFuncs = load('../../data/riderid/transferFunctions.mat');
 
@@ -59,15 +62,39 @@ for k = 1:length(speedBins)
         subplot(2, 1, 2)
         semilogx(w, meanPhase, w, meanPhase + stdPhase, 'b:', w, meanPhase - stdPhase, 'b--')
 
-        print(f1, '-dpng', ['../../plots/riderid/bode/mean-' tfNames{j} '-' num2str(v) '.png'], '-r150')
+        print(f1, '-dpng', ['../../plots/riderid/bode/mean-' tfNames{j} '-' strrep(num2str(v), '.', 'p') '.png'], '-r150')
 
+        % when I have the visibility off the plot has no lines, I can't
+        % figure that out
+        %f2 = figure('Visible', 'off');
         f2 = figure();
         set(f2,'PaperUnits','inches','PaperPosition',[0 0 4 3])
-        %set(f2, 'Visible', 'off') % if this is on the plot doesn't seem to
-        %show up
         bopt.Title.String = tit;
+        hold on
         bode(f2, trfc{:}, w, bopt)
-        print(f2, '-dpng', ['../../plots/riderid/bode/all-' tfNames{j} '-' num2str(v) '.png'], '-r150')
+        lines = findobj(f2, 'type', 'line');
+        set(lines, 'color', [0.7, 0.7, 0.7])
+        ax = findobj(f2, 'type', 'axes');
+        plot(ax(2), w, meanMag, 'k-', 'LineWidth', 2)
+        plot(ax(2), w, meanMag + stdMag, 'k--', 'LineWidth', 1.5)
+        plot(ax(2), w, meanMag - stdMag, 'k--', 'LineWidth', 1.5)
+        phaseLines = findobj(ax(1), 'type', 'line');
+        phaseYData = get(phaseLines, 'YData');
+        phases2 = zeros(size(phases, 1), length(w));
+        m = 1;
+        for n = 1:length(phaseYData)
+            if length(phaseYData{n}) == 500
+                phases2(m, :) = phaseYData{n};
+                m = m + 1;
+            end
+        end
+        meanPhases2 = mean(phases2, 1);
+        stdPhases2 = std(phases2, 1);
+        plot(ax(1), w, meanPhases2, 'k-', 'LineWidth', 2)
+        plot(ax(1), w, meanPhases2 + stdPhases2, 'k--', 'LineWidth', 1.5)
+        plot(ax(1), w, meanPhases2 - stdPhases2, 'k--', 'LineWidth', 1.5)
+        hold off
+        print(f2, '-dpng', ['../../plots/riderid/bode/all-' tfNames{j} '-' strrep(num2str(v), '.', 'p') '.png'], '-r150')
         close all
     end
 end

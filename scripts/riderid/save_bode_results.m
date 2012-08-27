@@ -1,3 +1,4 @@
+addpath('../../src/matlab')
 config
 addpath(PATH_TO_CONTROL_MODEL)
 
@@ -31,7 +32,12 @@ numRuns = length(results.matFiles);
 cl.delta_deltac = cell(numRuns, 1);
 cl.phiDot_phiDotc = cell(numRuns, 1);
 cl.yQ_yQc = cell(numRuns, 1);
+cl.delta_fB = cell(numRuns, 1);
+cl.phiDot_fB = cell(numRuns, 1);
+cl.phi_fB = cell(numRuns, 1);
+cl.psi_fB = cell(numRuns, 1);
 cl.yQ_fB = cell(numRuns, 1);
+cl.tDelta_fB = cell(numRuns, 1);
 
 open.phi_ePhi = cell(numRuns, 1);
 open.psi_ePsi = cell(numRuns, 1);
@@ -49,7 +55,12 @@ for i = 1:numRuns
         cl.delta_deltac{i} = nan;
         cl.phiDot_phiDotc{i} = nan;
         cl.yQ_yQc{i} = nan;
+        cl.delta_fB{i} = nan;
+        cl.phiDot_fB{i} = nan;
+        cl.phi_fB{i} = nan;
+        cl.psi_fB{i} = nan;
         cl.yQ_fB{i} = nan;
+        cl.tDelta_fB{i} = nan;
 
         open.phi_ePhi{i} = nan;
         open.psi_ePsi{i} = nan;
@@ -74,7 +85,7 @@ for i = 1:numRuns
             'neuroFreq', wnm, ...
             'simulate', false, ...
             'handlingQuality', false, ...
-            'forceTransfer', {'Y'}, ...
+            'forceTransfer', {'Delta', 'PhiDot', 'Phi', 'Psi', 'Y', 'Tdelta'}, ...
             'fullSystem', false, ...
             'display', false, ...
             'plot', false, ...
@@ -88,8 +99,18 @@ for i = 1:numRuns
                        modelData.closedLoops.PhiDot.den));
         cl.yQ_yQc{i, 1} = minreal(tf(modelData.closedLoops.Y.num, ...
             modelData.closedLoops.Y.den));
+        cl.delta_fB{i, 1} = minreal(tf(modelData.forceTF.Delta.num, ...
+            modelData.forceTF.Delta.den));
+        cl.phiDot_fB{i, 1} = minreal(tf(modelData.forceTF.PhiDot.num, ...
+            modelData.forceTF.PhiDot.den));
+        cl.phi_fB{i, 1} = minreal(tf(modelData.forceTF.Phi.num, ...
+            modelData.forceTF.Phi.den));
+        cl.psi_fB{i, 1} = minreal(tf(modelData.forceTF.Psi.num, ...
+            modelData.forceTF.Psi.den));
         cl.yQ_fB{i, 1} = minreal(tf(modelData.forceTF.Y.num, ...
             modelData.forceTF.Y.den));
+        cl.tDelta_fB{i, 1} = minreal(tf(modelData.forceTF.Tdelta.num, ...
+            modelData.forceTF.Tdelta.den));
 
         open.phi_ePhi{i, 1} = minreal(tf(modelData.openLoops.Phi.num, ...
             modelData.openLoops.Phi.den));
